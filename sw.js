@@ -1,9 +1,9 @@
 // BudgetWise Service Worker - Production Safe
 // Works for browser + installed PWA (GitHub Pages friendly)
 
-const CACHE_VERSION = "v33";                 // bump ad ogni release
+const CACHE_VERSION = "v32";                 // bump ad ogni release
 const CACHE_PREFIX = "budgetwise-cache-";
-const CACHE_NAME = CACHE_PREFIX + "20260305" + CACHE_VERSION;
+const CACHE_NAME = CACHE_PREFIX + "20260303" + CACHE_VERSION;
 
 const CORE_ASSETS = [
   "./",
@@ -15,9 +15,6 @@ const CORE_ASSETS = [
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
-  "./assets/vendor/chart.umd.min.js",
-  "./assets/vendor/xlsx.full.min.js",
-  "./assets/vendor/jspdf.umd.min.js",
 ];
 
 // Normalize cache keys for versioned assets like app.js?v=...

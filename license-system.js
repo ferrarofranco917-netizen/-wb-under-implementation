@@ -2,56 +2,31 @@
 // BUDGETWISE 2.0 - FREEMIUM LICENSE SYSTEM
 // ============================================
 
-// === ENV / CANALI (DEV vs BETA) ===
-// Obiettivo:
-// - DEV: libera per te (niente blocchi / premium sempre attivo)
-// - BETA: destinata ai tester (può essere protetta con licenza)
-//
-// NOTA: non usiamo solo il dominio (gitlab.io) perché sia DEV che BETA possono starci sopra.
-// Identifichiamo i canali tramite hostname/path del progetto.
-const BW_HOST = (location.hostname || '').toLowerCase();
-const BW_PATH = (location.pathname || '').toLowerCase();
-
-const BW_IS_LOCAL = (location.protocol === 'file:' || BW_HOST === 'localhost' || BW_HOST === '127.0.0.1');
-const BW_IS_DEV_REPO = (
-  BW_PATH.includes('/budgetwise-v2-under-update') ||
-  BW_HOST.includes('budgetwise-v2-under-update')
-);
-const BW_IS_BETA_REPO = (
-  BW_PATH.includes('/budgetwise-beta') ||
-  BW_HOST.includes('budgetwise-beta')
-);
-
-// === DEV BYPASS ===
-// Attivo sulla tua copia DEV (anche su GitLab Pages) e in locale.
+// === DEV BYPASS (solo tua copia GitHub Pages) ===
+// Attivo solo sulla repo /Budgetwise-V2-under-update/ per sviluppo senza vincoli.
 const BW_DEV_BYPASS = (
-  BW_IS_LOCAL ||
-  ((BW_HOST.includes('github.io') || BW_HOST.includes('gitlab.io')) && BW_IS_DEV_REPO)
+  location.hostname.includes('github.io') &&
+  location.pathname.includes('/Budgetwise-V2-under-update/')
 );
-
 if (BW_DEV_BYPASS) {
-  console.log('🔓 BudgetWise DEV BYPASS attivo: Premium sbloccato su canale DEV');
+  console.log('🔓 BudgetWise DEV BYPASS attivo: Premium sbloccato su questa repo');
   try { document.documentElement.classList.add('bw-dev'); } catch(e) {}
-} else if (BW_IS_BETA_REPO) {
-  console.log('🧪 BudgetWise canale BETA rilevato: applico regole/licenze beta');
 }
 
 class BudgetWiseLicense {
-
+    
     constructor() {
-        // ⚠️ Ordine di init importante: trial + secretKey devono esistere prima di checkPremiumStatus()
-        // (checkPremiumStatus() può usare trialStart e validateOfflineLicense() usa secretKey)
         this.licenseKey = localStorage.getItem('bw-license-key') || null;
         this.licenseEmail = localStorage.getItem('bw-license-email') || null;
-        this.trialUsed = localStorage.getItem('bw-trial-used') === 'true';
+        this.isPremium = this.checkPremiumStatus();
+        
+        if (BW_DEV_BYPASS) this.isPremium = true;
+this.trialUsed = localStorage.getItem('bw-trial-used') === 'true';
         this.trialStart = localStorage.getItem('bw-trial-start') || null;
-
+        
         // 🔑 CHIAVE SEGRETA PER LA VALIDAZIONE
         this.secretKey = 'BudgetWise-Mia-Frase-Segreta-2026'; // Cambia con la tua!
-
-        this.isPremium = this.checkPremiumStatus();
-        if (BW_DEV_BYPASS) this.isPremium = true;
-
+        
         // 🆓 LIMITAZIONI FREE VS PREMIUM
         this.limits = {
             free: {
@@ -87,11 +62,11 @@ class BudgetWiseLicense {
                 advancedFixedFormat: true
             }
         };
-
+        
         this.categories = ['Alimentari', 'Trasporti', 'Altro'];
     }
 
-    // Funzione di hash semplice
+    // Funzione di hash semplice (DA AGGIUNGERE)
     simpleHash(str) {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
@@ -102,170 +77,189 @@ class BudgetWiseLicense {
         return Math.abs(hash).toString(16).padStart(8, '0').substring(0, 8).toUpperCase();
     }
 
-    // Metodo di validazione offline
-    validateOfflineLicense(licenseKey, email) {
-        try {
-            if (!licenseKey || !email) return false;
+    // Metodo di validazione offline (DA AGGIUNGERE)
+    validateLicenseOffline(email, key) {
+        const parts = key.split('-');
+        if (parts.length !== 2) return false;
 
-            // Formato accettato: BW-XXXX-YYYYY-YYYYMMDD
-            if (!/^BW-[A-Z0-9]{3,6}-[A-Z0-9]{3,6}-\d{8}$/i.test(licenseKey.trim())) return false;
+        const hashFromKey = parts[0];
+        const dateStr = parts[1];
 
-            const parts = licenseKey.trim().split('-');
-            const dateStr = parts[parts.length - 1];
+        if (!/^\d{8}$/.test(dateStr)) return false;
 
-            // Controllo scadenza
-            const yyyy = parseInt(dateStr.slice(0, 4), 10);
-            const mm = parseInt(dateStr.slice(4, 6), 10) - 1;
-            const dd = parseInt(dateStr.slice(6, 8), 10);
+        const year = parseInt(dateStr.substring(0, 4), 10);
+        const month = parseInt(dateStr.substring(4, 6), 10) - 1;
+        const day = parseInt(dateStr.substring(6, 8), 10);
+        const expiry = new Date(year, month, day);
 
-            const expDate = new Date(yyyy, mm, dd);
-            if (isNaN(expDate.getTime())) return false;
+        if (isNaN(expiry.getTime())) return false;
 
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            expDate.setHours(0, 0, 0, 0);
+        // Verifica scadenza
+        if (expiry < new Date()) {
+            console.log('❌ Licenza scaduta');
+            return false;
+        }
 
-            if (expDate < today) return false;
+        // Verifica firma digitale
+        const data = `${email}:${expiry.toISOString()}`;
+        const expectedHash = this.simpleHash(data + this.secretKey);
 
-            // Firma semplice: hash(email|license|secret)
-            const payload = `${email.trim().toLowerCase()}|${licenseKey.trim().toUpperCase()}|${this.secretKey}`;
-            const sig = this.simpleHash(payload);
-
-            // Il sig deve essere contenuto in una parte del codice (semplice, offline)
-            // (Puoi rafforzarlo quando vuoi)
-            const keyUpper = licenseKey.trim().toUpperCase();
-            return keyUpper.includes(sig.substring(0, 4)) || keyUpper.includes(sig.substring(4, 8));
-        } catch (e) {
-            console.error('validateOfflineLicense error', e);
+        if (hashFromKey === expectedHash) {
+            console.log('✅ Licenza valida!');
+            return true;
+        } else {
+            console.log('❌ Firma digitale non valida');
             return false;
         }
     }
 
-    checkPremiumStatus() {
-        if (BW_DEV_BYPASS) return true;
+    // Metodo activateLicense modificato (DA SOSTITUIRE)
+    async activateLicense(email, key) {
+        // Per la fase di test, usiamo la validazione OFFLINE
+        const isValid = this.validateLicenseOffline(email, key);
 
-        // Se hai già una chiave in storage, validala offline (senza cambiare le tue regole)
-        if (this.licenseKey && this.licenseEmail) {
-            const ok = this.validateOfflineLicense(this.licenseKey, this.licenseEmail);
-            if (ok) return true;
-        }
+        if (isValid) {
+            // Estrai la data di scadenza dalla chiave
+            const datePart = key.split('-')[1];
+            const year = parseInt(datePart.substring(0, 4), 10);
+            const month = parseInt(datePart.substring(4, 6), 10) - 1;
+            const day = parseInt(datePart.substring(6, 8), 10);
+            const expiry = new Date(year, month, day);
 
-        // Trial
-        if (this.trialStart) {
-            const start = new Date(this.trialStart);
-            const now = new Date();
-            const diffDays = Math.floor((now - start) / (1000 * 60 * 60 * 24));
-            if (diffDays < 7) return true;
+            this.licenseKey = key;
+            this.licenseEmail = email;
+            this.isPremium = true;
+
+            // Salva i dati della licenza nel localStorage
+            localStorage.setItem('bw-license-key', key);
+            localStorage.setItem('bw-license-email', email);
+            localStorage.setItem('bw-license-valid', 'valid');
+            localStorage.setItem('bw-license-expiry', expiry.toISOString());
+
+            return true;
         }
 
         return false;
     }
 
+    // ... (tutti gli altri metodi esistenti rimangono identici) ...
+    checkPremiumStatus() {
+    if (BW_DEV_BYPASS) return true;
+    const license = localStorage.getItem('bw-license-valid');
+    const expiry = localStorage.getItem('bw-license-expiry');
+
+    if (!license || !expiry) return false;
+
+    const expiryDate = new Date(expiry);
+    const now = new Date();
+
+    return now < expiryDate && license === 'valid';
+}
+    
+    getCurrentLimits() {
+        if (this.hasFullPremiumAccess()) return this.limits.premium;
+        return this.limits.free;
+    }
+    
+    canAddTransaction(currentCount) {
+        const limits = this.getCurrentLimits();
+        return currentCount < limits.maxTransactions;
+    }
+    
+    canAddFixedExpense(currentCount) {
+        const limits = this.getCurrentLimits();
+        return currentCount < limits.maxFixedExpenses;
+    }
+    
+    canUseFeature(feature) {
+        const limits = this.getCurrentLimits();
+        return limits[feature] === true;
+    }
+    
+    getMaxSavingsPercent() {
+        return this.getCurrentLimits().maxSavingsPercent;
+    }
+    
+    isFeatureLocked(feature) {
+        return !this.canUseFeature(feature);
+    }
+    
     startTrial() {
-        if (BW_DEV_BYPASS) {
-            this.isPremium = true;
-            return true;
-        }
+    if (BW_DEV_BYPASS) return true;
+    if (this.trialUsed) return false;
 
-        if (this.trialUsed) return false;
-        this.trialUsed = true;
-        this.trialStart = new Date().toISOString();
-        localStorage.setItem('bw-trial-used', 'true');
-        localStorage.setItem('bw-trial-start', this.trialStart);
-        this.isPremium = true;
-        return true;
-    }
+    this.trialUsed = true;
+    this.trialStart = new Date().toISOString();
+    localStorage.setItem('bw-trial-used', 'true');
+    localStorage.setItem('bw-trial-start', this.trialStart);
 
-    activatePremium(licenseKey, email) {
-        if (BW_DEV_BYPASS) {
-            this.isPremium = true;
-            return { ok: true, message: 'DEV bypass attivo: Premium sbloccato' };
-        }
+    const trialEnd = new Date();
+    trialEnd.setDate(trialEnd.getDate() + 7);
+    localStorage.setItem('bw-trial-end', trialEnd.toISOString());
 
-        if (!licenseKey || !email) {
-            return { ok: false, message: 'Inserisci licenza ed email.' };
-        }
-
-        const ok = this.validateOfflineLicense(licenseKey, email);
-        if (!ok) {
-            return { ok: false, message: 'Licenza non valida o scaduta.' };
-        }
-
-        this.licenseKey = licenseKey.trim().toUpperCase();
-        this.licenseEmail = email.trim().toLowerCase();
-        localStorage.setItem('bw-license-key', this.licenseKey);
-        localStorage.setItem('bw-license-email', this.licenseEmail);
-
-        this.isPremium = true;
-        return { ok: true, message: 'Premium attivato.' };
-    }
-
-    deactivatePremium() {
-        this.licenseKey = null;
-        this.licenseEmail = null;
-        localStorage.removeItem('bw-license-key');
-        localStorage.removeItem('bw-license-email');
-        this.isPremium = this.checkPremiumStatus();
-    }
-
-   getLimits() {
-    return this.isPremium ? this.limits.premium : this.limits.free;
+    return true;
 }
+    
+    isTrialActive() {
+    if (BW_DEV_BYPASS) return true;
+    if (!this.trialUsed || !this.trialStart) return false;
 
-// ✅ compatibilità con app.js (alias)
-getCurrentLimits() {
-    return this.getLimits();
-}
+    const trialEnd = new Date(localStorage.getItem('bw-trial-end') || '');
+    const now = new Date();
 
-// ✅ compatibilità con app.js
-hasFullPremiumAccess() {
-    return !!this.isPremium || BW_DEV_BYPASS === true;
+    return now < trialEnd;
 }
-
-// ✅ compatibilità extra (alcune patch chiamano questo)
-isPremiumActive() {
-    return this.hasFullPremiumAccess();
+    
+    hasFullPremiumAccess() {
+    if (BW_DEV_BYPASS) return true;
+    return this.isPremium || this.isTrialActive();
 }
-    getStatus() {
-        if (BW_DEV_BYPASS) return 'premium';
-        if (this.licenseKey && this.licenseEmail && this.validateOfflineLicense(this.licenseKey, this.licenseEmail)) return 'premium';
-        if (this.trialStart && this.isPremium) return 'trial';
-        return 'free';
+    
+    getUpgradeMessage(feature) {
+        const messages = {
+            transactions: 'Hai raggiunto il limite di 30 transazioni mensili!',
+            fixedExpenses: 'Hai raggiunto il limite di 5 spese fisse attive!',
+            customCategories: 'Crea categorie personalizzate e organizza meglio le tue spese!',
+            csvImport: 'Importa i tuoi estratti conto con un clic! 📊',
+            aiAssistant: 'Chiedi consigli al tuo assistente finanziario AI avanzato! 🤖',
+            voiceRecognition: 'Aggiungi spese con la voce, senza scrivere! 🎤',
+            cloudSync: 'Sincronizza i dati su tutti i dispositivi! 🔄',
+            colorCustomization: 'Personalizza l\'app con i tuoi colori preferiti! 🎨',
+            calendarExport: 'Esporta in Google Calendar e pianifica! 📅',
+            advancedFixedFormat: 'Visualizza le scadenze in mesi e anni! 📆'
+        };
+        
+        return messages[feature] || 'Questa funzionalità è disponibile nella versione Premium! 💎';
     }
-
+    
     getRemainingDays() {
-        if (BW_DEV_BYPASS) return 9999;
-
-        const status = this.getStatus();
-
-        if (status === 'trial' && this.trialStart) {
-            const start = new Date(this.trialStart);
+        if (this.isPremium) {
+            const expiry = new Date(localStorage.getItem('bw-license-expiry') || '');
             const now = new Date();
-            const diffDays = Math.floor((now - start) / (1000 * 60 * 60 * 24));
-            return Math.max(0, 7 - diffDays);
+            const diff = expiry - now;
+            return Math.ceil(diff / (1000 * 60 * 60 * 24));
         }
-
-        if (status === 'premium' && this.licenseKey) {
-            const parts = this.licenseKey.split('-');
-            const dateStr = parts[parts.length - 1];
-            const yyyy = parseInt(dateStr.slice(0, 4), 10);
-            const mm = parseInt(dateStr.slice(4, 6), 10) - 1;
-            const dd = parseInt(dateStr.slice(6, 8), 10);
-            const expDate = new Date(yyyy, mm, dd);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            expDate.setHours(0, 0, 0, 0);
-            const diff = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
-            return Math.max(0, diff);
+        
+        if (this.isTrialActive()) {
+            const trialEnd = new Date(localStorage.getItem('bw-trial-end') || '');
+            const now = new Date();
+            const diff = trialEnd - now;
+            return Math.ceil(diff / (1000 * 60 * 60 * 24));
         }
-
+        
         return 0;
     }
-
+    
+    getStatus() {
+        if (this.isPremium) return 'premium';
+        if (this.isTrialActive()) return 'trial';
+        return 'free';
+    }
+    
     getPlanInfo() {
         const status = this.getStatus();
         const remainingDays = this.getRemainingDays();
-
+        
         switch(status) {
             case 'premium':
                 return {
@@ -290,7 +284,7 @@ isPremiumActive() {
                 };
         }
     }
-
+    
     getRemainingTransactions() {
         const count = window.app?.calculateMonthlyTransactions?.() || 0;
         return Math.max(0, this.limits.free.maxTransactions - count);

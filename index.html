@@ -22,12 +22,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Chart.js -->
-    <script src="./assets/vendor/chart.umd.min.js"
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
     <!-- SheetJS per leggere file Excel -->
-    <script src="./assets/vendor/xlsx.full.min.js"
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/xlsx@0.20.2/dist/xlsx.full.min.js';"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     
     <!-- Meta tags social -->
     <meta property="og:title" content="BudgetWise 2.0">
@@ -472,7 +470,7 @@
                     <input type="file" id="csvFile" accept=".csv,.txt,.xls,.xlsx" style="display: none;">
                     <div class="file-name" id="csvFileName" data-i18n="csvNoFile">Nessun file selezionato</div>
                     <div class="import-actions">
-                        <button class="btn-secondary" id="importCsvBtn" type="button" data-i18n="csvImportBtn">📥 Importa CSV / Excel</button>
+                        <button class="btn-secondary" id="importCsvBtn" data-i18n="csvImportBtn">📥 Importa CSV / Excel</button>
                         <button class="btn-link" id="importAdvancedToggle" type="button" data-i18n="advancedOptions">⚙️ Opzioni avanzate</button>
                     </div>
                 </div>

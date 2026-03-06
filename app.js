@@ -4058,12 +4058,6 @@ formatDaysToYearsMonthsDays(days) {
     }
 
     updateChart() {
-
-        // ✅ Safety: Chart.js could be missing (e.g., vendor 404 / offline). Do not crash the app.
-        if (typeof Chart === 'undefined') {
-            console.warn('⚠️ Chart.js non disponibile: grafico disabilitato');
-            return;
-        }
         const categories = {};
         const categoryExpenses = {};
 
@@ -4633,49 +4627,34 @@ document.documentElement.style.setProperty('--accent-gradient',
         alert(this.t('backupDownloaded'));
     }
 
-
-    async restoreData(event) {
-        const file = event?.target?.files?.[0];
+    restoreData(event) {
+        const file = event.target.files[0];
         if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                this.data = JSON.parse(e.target.result);
 
-        try {
-            // ✅ Lettura robusta: preferisce File.text(), fallback a FileReader
-            let text = '';
-            if (typeof file.text === 'function') {
-                text = await file.text();
-            } else {
-                text = await new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => resolve(e?.target?.result ?? '');
-                    reader.onerror = () => reject(new Error('Errore FileReader'));
-                    reader.readAsText(file);
-                });
+                // Sanifica importi spese fisse (evita mismatch con import banca: es. "1.234,56")
+                if (Array.isArray(this.data.fixedExpenses)) {
+                    this.data.fixedExpenses = this.data.fixedExpenses.map(e => {
+                        if (!e) return e;
+                        const a = this.parseMoney(e.amount);
+                        return { ...e, amount: a };
+                    });
+                }
+
+                this.saveData();
+                this.updateUI();
+                this.updateChart();
+                this.updateTransactionCount();
+                this.applyLanguage();
+                alert(this.t('dataRestored'));
+            } catch {
+                alert(this.t('invalidFile'));
             }
-
-            const parsed = JSON.parse(String(text || ''));
-            // Supporto a backup "vecchi": se dentro c'è {data: {...}} usa quello
-            const dataObj = (parsed && typeof parsed === 'object' && parsed.data && typeof parsed.data === 'object')
-                ? parsed.data
-                : parsed;
-
-            this.data = dataObj;
-            if (this.data.savingsPot === undefined) this.data.savingsPot = 0;
-
-            this.saveData();
-
-            // Refresh UI (senza cambiare logiche)
-            try { this.updateUI(); } catch(e) {}
-            try { this.updateChart(); } catch(e) {}
-            try { this.applyLanguage(); } catch(e) {}
-
-            alert(this.t('dataRestored') || '📂 Dati ripristinati!');
-        } catch (e) {
-            console.error('❌ Errore ripristino backup:', e);
-            alert(this.t('fileReadError') || '❌ Errore durante la lettura del file');
-        } finally {
-            // reset input file per permettere re-upload stesso file
-            try { if (event?.target) event.target.value = ''; } catch(e) {}
-        }
+        };
+        reader.readAsText(file);
     }
 
     resetAll() {
@@ -5001,7 +4980,7 @@ document.documentElement.style.setProperty('--accent-gradient',
 
 // ========== REVISIONE IMPORT CSV CON CREAZIONE CATEGORIE E AUTO-COMPLETAMENTO ==========
 showImportReview(importedExpenses) {
-    return new Promise(async (resolve) => {
+    return new Promise((resolve) => {
         const overlay = document.getElementById('importReviewOverlay');
         const listEl = document.getElementById('importReviewList');
         
@@ -5241,7 +5220,9 @@ const autoCompleteIdentical = (startIndex, newCategory, description) => {
 }
     // ========== IMPORT CSV CON MAPPATURA E REVISIONE ==========
     async parseCSV(file, delimiter, dateFormat, skipRows = 0, headerRow = 1) {
-        if (typeof this.checkFreeLimits === 'function' && !this.checkFreeLimits('csvImport')) return { cancelled: true, added: 0, incomes: 0 };
+        // Verifica limite import
+        if (!this.checkFreeLimits('csvImport')) return { cancelled: true, added: 0, incomes: 0 };
+        
         console.log('📥 Inizio import CSV:', file.name, 'delimiter:', delimiter, 'dateFormat:', dateFormat, 'skipRows:', skipRows, 'headerRow:', headerRow);
 
         const mapping = await this.showMappingDialog(file, delimiter, skipRows, headerRow);
@@ -5309,10 +5290,15 @@ const autoCompleteIdentical = (startIndex, newCategory, description) => {
 
                         let _suggested = null;
                         if (!category) {
-                            const sug = this.suggestCategory(description);
-                            category = sug.confidence >= this.CATEGORY_CONFIDENCE_THRESHOLD ? sug.category : 'Altro';
-                            if (sug.confidence > 0 && sug.confidence < this.CATEGORY_CONFIDENCE_THRESHOLD) {
-                                _suggested = sug.category;
+                            // Suggerimento categorie (solo premium o base)
+                            if (!this.license?.isFeatureLocked?.('categoryLearning')) {
+                                const sug = this.suggestCategory(description);
+                                category = sug.confidence >= this.CATEGORY_CONFIDENCE_THRESHOLD ? sug.category : 'Altro';
+                                if (sug.confidence > 0 && sug.confidence < this.CATEGORY_CONFIDENCE_THRESHOLD) {
+                                    _suggested = sug.category;
+                                }
+                            } else {
+                                category = 'Altro';
                             }
                         }
 
@@ -5353,15 +5339,14 @@ const autoCompleteIdentical = (startIndex, newCategory, description) => {
 
                             if (tempIncomes.length > 0) {
                                 if (!this.data.incomes) this.data.incomes = [];
-                                this.data.incomes.push(...tempIncomes);
+                               this.data.incomes.push(...tempIncomes);
                                 addedIncomes = tempIncomes.length;
                             }
 
                             this.saveData();
                             this.updateUI();
                             this.updateChart();
-                        if (typeof this.updateTransactionCount === 'function') this.updateTransactionCount();
-                            if (typeof this.updateTransactionCount === 'function') this.updateTransactionCount();
+                            this.updateTransactionCount();
 
                             const mostRecent = reviewed
                                 .map(e => this.normalizeIsoDate(e.date))
@@ -5392,6 +5377,7 @@ const autoCompleteIdentical = (startIndex, newCategory, description) => {
                         this.saveData();
                         this.updateUI();
                         this.updateChart();
+                        this.updateTransactionCount();
 
                         this.showToast(
                             this.data.language === 'it'
@@ -5568,7 +5554,9 @@ async showMappingDialog(file, delimiter, skipRows = 0, headerRow = 1) {
 }
     // ========== IMPORT EXCEL CON AUTO-RICONOSCIMENTO INTELLIGENTE ==========
 async parseExcel(file, sheetIndex = 0, headerRow = -1) {
-        if (typeof this.checkFreeLimits === 'function' && !this.checkFreeLimits('csvImport')) return { cancelled: true, added: 0, incomes: 0 };
+        // Verifica limite import
+        if (!this.checkFreeLimits('csvImport')) return { cancelled: true, added: 0, incomes: 0 };
+        
         const self = this; // 
     console.log('📥 Inizio import Excel con auto-riconoscimento:', file.name, 'foglio:', sheetIndex);
 
@@ -5778,13 +5766,17 @@ const allLines = relevantRows.map((row, rowIndex) =>
         let amount = parseFloat(amountStr);
         if (isNaN(amount)) continue;
 
-        // Suggerisci categoria se mancante
+        // Suggerisci categoria se mancante (solo premium)
         let _suggested = null;
         if (!category) {
-            const sug = this.suggestCategory(description);
-            category = sug.confidence >= this.CATEGORY_CONFIDENCE_THRESHOLD ? sug.category : 'Altro';
-            if (sug.confidence > 0 && sug.confidence < this.CATEGORY_CONFIDENCE_THRESHOLD) {
-                _suggested = sug.category;
+            if (!this.license?.isFeatureLocked?.('categoryLearning')) {
+                const sug = this.suggestCategory(description);
+                category = sug.confidence >= this.CATEGORY_CONFIDENCE_THRESHOLD ? sug.category : 'Altro';
+                if (sug.confidence > 0 && sug.confidence < this.CATEGORY_CONFIDENCE_THRESHOLD) {
+                    _suggested = sug.category;
+                }
+            } else {
+                category = 'Altro';
             }
         }
 
@@ -5864,9 +5856,7 @@ if (tempIncomes.length > 0) {
 
 this.updateUI();
 this.updateChart();
-
-    this.updateUI();
-    this.updateChart();
+this.updateTransactionCount();
 
     if (addedExpenses > 0) {
         const mostRecent = importedExpenses
@@ -6059,6 +6049,30 @@ this.updateChart();
     }
 
     setupVoice() {
+        // Blocca in free
+        if (!this.checkFreeLimits('voiceRecognition')) {
+            const micFixed = document.getElementById('micFixedBtn');
+            const voiceBtn = document.getElementById('voiceBtn');
+            const chatVoice = document.getElementById('chatVoiceBtn');
+            
+            if (micFixed) {
+                micFixed.disabled = true;
+                micFixed.title = '🔒 Funzione Premium';
+                micFixed.style.opacity = '0.5';
+            }
+            if (voiceBtn) {
+                voiceBtn.disabled = true;
+                voiceBtn.title = '🔒 Funzione Premium';
+                voiceBtn.style.opacity = '0.5';
+            }
+            if (chatVoice) {
+                chatVoice.disabled = true;
+                chatVoice.title = '🔒 Funzione Premium';
+                chatVoice.style.opacity = '0.5';
+            }
+            return;
+        }
+        
         console.log('Setup voice...');
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
             console.warn('Riconoscimento vocale non supportato');
@@ -6180,74 +6194,78 @@ this.updateChart();
     }
 
     // ========== AI WIDGET ==========
-    generateAiSuggestion() {
-        const suggestions = [];
-        const language = this.data.language;
-        
-        const categoryTotals = {};
-        if (this.data.variableExpenses && typeof this.data.variableExpenses === 'object') {
-            Object.values(this.data.variableExpenses).forEach(day => {
-                if (Array.isArray(day)) {
-                    day.forEach(exp => {
-                        const cat = exp.category || 'Altro';
-                        categoryTotals[cat] = (categoryTotals[cat] || 0) + (exp.amount || 0);
-                    });
-                }
-            });
-        }
-
-        if (Object.keys(categoryTotals).length === 0) {
-            document.getElementById('aiWidget').style.display = 'none';
-            return;
-        }
-
-        const topCategory = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0];
-        const topCatName = topCategory[0];
-
-        if (topCategory[1] > 100) {
-            const reduction = Math.round(topCategory[1] * 0.1);
-            suggestions.push({
-                message: language === 'it'
-                    ? `💡 Hai speso ${this.formatCurrency(topCategory[1])} in ${topCatName}. Riducendo del 10% (${this.formatCurrency(reduction)}), potresti destinare quella cifra al risparmio.`
-                    : `💡 You spent ${this.formatCurrency(topCategory[1])} on ${topCatName}. By reducing it by 10% (${this.formatCurrency(reduction)}), you could add that to your savings.`,
-                action: language === 'it' ? 'Imposta obiettivo' : 'Set goal',
-                actionType: 'reduce',
-                category: topCategory[0],
-                amount: reduction
-            });
-        }
-
-        if (categoryTotals.Trasporti && categoryTotals.Trasporti > 50) {
-            const potentialSave = Math.round(categoryTotals.Trasporti * 0.2);
-            suggestions.push({
-                message: language === 'it'
-                    ? `🚗 Hai speso ${this.formatCurrency(categoryTotals.Trasporti)} in trasporti. Usando più mezzi pubblici, potresti risparmiare circa ${this.formatCurrency(potentialSave)} al mese.`
-                    : `🚗 You spent ${this.formatCurrency(categoryTotals.Trasporti)} on transport. Using public transport more could save you about ${this.formatCurrency(potentialSave)} per month.`,
-                action: language === 'it' ? 'Scopri come' : 'Learn how',
-                actionType: 'transport',
-                amount: potentialSave
-            });
-        }
-
-        if (categoryTotals.Svago && categoryTotals.Svago > 80) {
-            const potentialSave = Math.round(categoryTotals.Svago * 0.15);
-            suggestions.push({
-                message: language === 'it'
-                    ? `🎮 Hai speso ${this.formatCurrency(categoryTotals.Svago)} in svago. Limitando le uscite a 2 a settimana, potresti risparmiare ${this.formatCurrency(potentialSave)}.`
-                    : `🎮 You spent ${this.formatCurrency(categoryTotals.Svago)} on leisure. Limiting to 2 outings per week could save you ${this.formatCurrency(potentialSave)}.`,
-                action: language === 'it' ? 'Pianifica' : 'Plan',
-                actionType: 'leisure',
-                amount: potentialSave
-            });
-        }
-
-        if (suggestions.length > 0) {
-            const randomIndex = Math.floor(Math.random() * suggestions.length);
-            this.showAiSuggestion(suggestions[randomIndex]);
-        } else {
-            document.getElementById('aiWidget').style.display = 'none';
-        }
+generateAiSuggestion() {
+    const suggestions = [];
+    const language = this.data.language;
+    
+    const categoryTotals = {};
+    if (this.data.variableExpenses && typeof this.data.variableExpenses === 'object') {
+        Object.values(this.data.variableExpenses).forEach(day => {
+            if (Array.isArray(day)) {
+                day.forEach(exp => {
+                    const cat = exp.category || 'Altro';
+                    categoryTotals[cat] = (categoryTotals[cat] || 0) + (exp.amount || 0);
+                });
+            }
+        });
     }
+
+    if (Object.keys(categoryTotals).length === 0) {
+        document.getElementById('aiWidget').style.display = 'none';
+        return;
+    }
+
+    const topCategory = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0];
+    const topCatName = topCategory[0];
+
+    if (topCategory[1] > 100) {
+        const reduction = Math.round(topCategory[1] * 0.1);
+        suggestions.push({
+            message: this.t('aiSuggestionReduce', {
+                amount: this.formatCurrency(topCategory[1]),
+                category: topCatName,
+                reduction: this.formatCurrency(reduction)
+            }),
+            action: this.t('aiActionSetGoal'),
+            actionType: 'reduce',
+            category: topCategory[0],
+            amount: reduction
+        });
+    }
+
+    if (categoryTotals.Trasporti && categoryTotals.Trasporti > 50) {
+        const potentialSave = Math.round(categoryTotals.Trasporti * 0.2);
+        suggestions.push({
+            message: this.t('aiSuggestionTransport', {
+                amount: this.formatCurrency(categoryTotals.Trasporti),
+                potential: this.formatCurrency(potentialSave)
+            }),
+            action: this.t('aiActionLearnHow'),
+            actionType: 'transport',
+            amount: potentialSave
+        });
+    }
+
+    if (categoryTotals.Svago && categoryTotals.Svago > 80) {
+        const potentialSave = Math.round(categoryTotals.Svago * 0.15);
+        suggestions.push({
+            message: this.t('aiSuggestionLeisure', {
+                amount: this.formatCurrency(categoryTotals.Svago),
+                potential: this.formatCurrency(potentialSave)
+            }),
+            action: this.t('aiActionPlan'),
+            actionType: 'leisure',
+            amount: potentialSave
+        });
+    }
+
+    if (suggestions.length > 0) {
+        const randomIndex = Math.floor(Math.random() * suggestions.length);
+        this.showAiSuggestion(suggestions[randomIndex]);
+    } else {
+        document.getElementById('aiWidget').style.display = 'none';
+    }
+}
 
     showAiSuggestion(suggestion) {
         const widget = document.getElementById('aiWidget');
@@ -6342,6 +6360,21 @@ function initApp() {
         window.appInitialized = true;
         // Rende disponibile anche 'app' per comodità
         window.app = window.BudgetWiseApp;
+        // ✅ Merge Premium (Report/PDF) translations once they are defined (same file, later).
+        (function ensurePremiumTranslations(){
+            let tries = 0;
+            const tick = () => {
+                tries++;
+                try {
+                    if (window.app && window.app.mergeTranslations && window.app.getPremiumModuleTranslations) {
+                        window.app.mergeTranslations(window.app.getPremiumModuleTranslations());
+                        return;
+                    }
+                } catch (_) {}
+                if (tries < 50) setTimeout(tick, 100);
+            };
+            setTimeout(tick, 0);
+        })();
         console.log('✅ BudgetWise inizializzato correttamente');
         console.log('👉 Nella console puoi usare: window.app o window.BudgetWiseApp');
     } catch (error) {
@@ -6374,186 +6407,157 @@ function setupImportHandlers() {
     const excelHeaderSelect = document.getElementById('excelHeaderRow');
     const advancedToggle = document.getElementById('importAdvancedToggle');
     const advancedWrap = document.getElementById('importAdvanced');
-    const chooseLabel = document.getElementById('csvChooseFileLabel');
-
-    if (!btn || !fileInput || !window.app || typeof window.app.t !== 'function') {
+    
+    if (!btn || !fileInput || !window.app) {
         console.error('Elementi import non trovati');
         return;
     }
 
-    window._importState = window._importState || {
-        selectedFile: null,
-        selectedFileName: '',
-        pendingExcelFile: null,
-        autoImportAfterPick: false,
-        isImporting: false,
-    };
+    // Variabile per tenere traccia del file Excel in attesa
+    window._pendingExcelFile = null;
 
-    const state = window._importState;
-
-    const resetUi = () => {
-        fileInput.value = '';
-        state.selectedFile = null;
-        state.selectedFileName = '';
-        state.pendingExcelFile = null;
-        state.autoImportAfterPick = false;
-        if (fileNameSpan) {
-            fileNameSpan.textContent = window.app?.t ? window.app.t('csvNoFile') : 'Nessun file selezionato';
-        }
-        if (sheetSelect) {
-            sheetSelect.innerHTML = `<option value="">${window.app?.t ? window.app.t('excelSheetPlaceholder') : 'Carica un file Excel'}</option>`;
-            sheetSelect.disabled = true;
-        }
-    };
-
-    const setSelectedFile = (file) => {
-        state.selectedFile = file || null;
-        state.selectedFileName = file?.name || '';
-        if (fileNameSpan) {
-            fileNameSpan.textContent = file?.name || (window.app?.t ? window.app.t('csvNoFile') : 'Nessun file selezionato');
-        }
-    };
-
-    const preloadExcelSheets = async (file) => {
-        if (!file || !sheetSelect) return;
-        sheetSelect.innerHTML = '<option value="">Caricamento...</option>';
-        sheetSelect.disabled = true;
-
-        const arrayBuffer = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (ev) => resolve(ev.target.result);
-            reader.onerror = () => reject(new Error('Errore nella lettura del file Excel'));
-            reader.readAsArrayBuffer(file);
-        });
-
-        const data = new Uint8Array(arrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
-        sheetSelect.innerHTML = workbook.SheetNames.map((name, index) =>
-            `<option value="${index}">${index + 1}. ${name}</option>`
-        ).join('');
-        sheetSelect.disabled = false;
-        sheetSelect.value = '0';
-        state.pendingExcelFile = file;
-    };
-
-    const doImport = async () => {
-        if (state.isImporting) return;
-
-        const selectedFile = (fileInput.files && fileInput.files[0]) || state.selectedFile || state.pendingExcelFile;
-        if (!selectedFile) {
-            resetUi();
-            alert(window.app?.t ? window.app.t('csvNoFile') : 'Nessun file selezionato');
-            return;
-        }
-
-        const fileExt = selectedFile.name.split('.').pop().toLowerCase();
-        const isExcel = ['xls', 'xlsx'].includes(fileExt);
-
-        try {
-            state.isImporting = true;
-            btn.disabled = true;
-            btn.textContent = '⏳ Importazione...';
-
-            if (isExcel) {
-                const sheetIndex = (sheetSelect && !sheetSelect.disabled && sheetSelect.value !== '')
-                    ? parseInt(sheetSelect.value, 10)
-                    : 0;
-                const headerRow = excelHeaderSelect
-                    ? parseInt(excelHeaderSelect.value || '-1', 10)
-                    : -1;
-                await window.app.parseExcel(selectedFile, sheetIndex, headerRow);
-            } else {
-                const delimiter = document.getElementById('csvSeparator')?.value || ';';
-                const dateFormat = document.getElementById('csvDelimiter')?.value || 'DD/MM/YYYY';
-                const skipRows = parseInt(skipRowsInput?.value || '0', 10);
-                const headerRow = parseInt(headerRowInput?.value || '1', 10);
-                await window.app.parseCSV(selectedFile, delimiter, dateFormat, skipRows, headerRow);
-            }
-
-            resetUi();
-        } catch (error) {
-            console.error(error);
-            alert('❌ Errore durante l\'import: ' + (error?.message || String(error)));
-        } finally {
-            state.isImporting = false;
-            state.autoImportAfterPick = false;
-            btn.disabled = false;
-            btn.innerHTML = window.app?.t ? window.app.t('csvImportBtn') : '📥 Importa CSV / Excel';
-        }
-    };
-
-    if (advancedToggle && advancedWrap && advancedToggle.dataset.bound !== '1') {
-        advancedToggle.dataset.bound = '1';
-        advancedToggle.textContent = window.app ? window.app.t('advancedOptions') : '⚙️ Opzioni avanzate';
-        advancedToggle.addEventListener('click', (e) => {
-            e.preventDefault();
+            // Toggle opzioni avanzate (default: nascoste)
+    if (advancedToggle && advancedWrap) {
+        // Rimuovi eventuali listener precedenti
+        advancedToggle.replaceWith(advancedToggle.cloneNode(true));
+        const newAdvancedToggle = document.getElementById('importAdvancedToggle');
+        
+        // Imposta il testo iniziale in base alla lingua corrente
+        newAdvancedToggle.textContent = window.app ? window.app.t('advancedOptions') : '⚙️ Opzioni avanzate';
+        
+        newAdvancedToggle.addEventListener('click', () => {
             const isOpen = advancedWrap.style.display !== 'none';
             advancedWrap.style.display = isOpen ? 'none' : 'block';
-            advancedToggle.textContent = isOpen
+            // Usa la traduzione corretta in base allo stato
+            newAdvancedToggle.textContent = isOpen 
                 ? (window.app ? window.app.t('advancedOptions') : '⚙️ Opzioni avanzate')
                 : (window.app ? window.app.t('hideOptions') : '✕ Nascondi opzioni');
         });
     }
-
-    if (chooseLabel && chooseLabel.dataset.bound !== '1') {
-        chooseLabel.dataset.bound = '1';
-        chooseLabel.addEventListener('click', (e) => {
-            e.preventDefault();
-            fileInput.click();
-        });
-    }
-
-    if (fileInput.dataset.bound !== '1') {
-        fileInput.dataset.bound = '1';
-        fileInput.addEventListener('change', async function (e) {
-            const file = e.target.files && e.target.files[0];
-            if (!file) {
-                resetUi();
-                return;
+    
+    // Gestione cambio file
+    fileInput.replaceWith(fileInput.cloneNode(true));
+    const newFileInput = document.getElementById('csvFile');
+    
+    newFileInput.addEventListener('change', async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        fileNameSpan.textContent = file.name;
+        
+        const fileExt = file.name.split('.').pop().toLowerCase();
+        const isExcel = ['xls', 'xlsx'].includes(fileExt);
+        
+        if (isExcel) {
+            if (sheetSelect) {
+                sheetSelect.innerHTML = '<option value="">Caricamento...</option>';
+                sheetSelect.disabled = true;
             }
-
-            setSelectedFile(file);
-            const fileExt = file.name.split('.').pop().toLowerCase();
-            const isExcel = ['xls', 'xlsx'].includes(fileExt);
-
+            
             try {
-                if (isExcel) {
-                    await preloadExcelSheets(file);
-                } else {
-                    state.pendingExcelFile = null;
-                    if (sheetSelect) {
-                        sheetSelect.innerHTML = `<option value="">${window.app?.t ? window.app.t('excelSheetPlaceholder') : 'Carica un file Excel'}</option>`;
-                        sheetSelect.disabled = true;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        
+                        if (sheetSelect) {
+                            sheetSelect.innerHTML = workbook.SheetNames.map((name, index) => 
+                                `<option value="${index}">${index+1}. ${name}</option>`
+                            ).join('');
+                            sheetSelect.disabled = false;
+                            sheetSelect.value = '0';
+                        }
+                        
+                        window._pendingExcelFile = file;
+                        
+                    } catch (err) {
+                        alert('❌ Errore nella lettura del file Excel: ' + err.message);
                     }
-                }
-
-                if (state.autoImportAfterPick) {
-                    setTimeout(() => { doImport(); }, 0);
-                }
-            } catch (err) {
-                console.error(err);
-                alert('❌ Errore nella lettura del file Excel: ' + err.message);
+                };
+                reader.readAsArrayBuffer(file);
+                
+            } catch (error) {
+                alert('❌ Errore nella lettura del file Excel: ' + error.message);
             }
-        });
-    }
-
-    if (btn.dataset.bound !== '1') {
-        btn.dataset.bound = '1';
-        btn.addEventListener('click', async function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            const selectedFile = (fileInput.files && fileInput.files[0]) || state.selectedFile || state.pendingExcelFile;
-            if (!selectedFile) {
-                state.autoImportAfterPick = true;
-                fileInput.click();
-                return;
+        } else {
+            if (sheetSelect) {
+                sheetSelect.innerHTML = '<option value="">Carica un file Excel</option>';
+                sheetSelect.disabled = true;
             }
+            window._pendingExcelFile = null;
+        }
+    });
 
-            await doImport();
-        });
-    }
+    // Gestione click pulsante Importa
+    const newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
+    
+    newBtn.addEventListener('click', async function() {
+        const file = newFileInput.files[0];
+        const pendingFile = window._pendingExcelFile;
+        
+        if (!file && !pendingFile) {
+            // Apri il file picker se non è stato selezionato niente
+            newFileInput.click();
+            return;
+        }
+        
+        const fileToImport = pendingFile || file;
+        const fileExt = fileToImport.name.split('.').pop().toLowerCase();
+        const isExcel = ['xls', 'xlsx'].includes(fileExt);
+        
+        try {
+            if (isExcel) {
+                const sheetIndex = (sheetSelect && !sheetSelect.disabled && sheetSelect.value !== '')
+                    ? parseInt(sheetSelect.value)
+                    : 0;
+                const headerRow = excelHeaderSelect
+                    ? parseInt(excelHeaderSelect.value || '-1')
+                    : -1;
+                
+                newBtn.textContent = '⏳ Importazione...';
+                newBtn.disabled = true;
+                
+                await window.app.parseExcel(fileToImport, sheetIndex, headerRow);
+                
+                window._pendingExcelFile = null;
+                newFileInput.value = '';
+                fileNameSpan.textContent = 'Nessun file selezionato';
+                if (sheetSelect) {
+                    sheetSelect.innerHTML = '<option value="">Carica un file Excel</option>';
+                    sheetSelect.disabled = true;
+                }
+                
+            } else {
+                const delimiter = document.getElementById('csvSeparator').value;
+                const dateFormat = document.getElementById('csvDelimiter').value;
+                const skipRows = parseInt(skipRowsInput?.value || '0');
+                const headerRow = parseInt(headerRowInput?.value || '1');
+                
+                newBtn.textContent = '⏳ Importazione...';
+                newBtn.disabled = true;
+                
+                await window.app.parseCSV(fileToImport, delimiter, dateFormat, skipRows, headerRow);
+                
+                newFileInput.value = '';
+                fileNameSpan.textContent = 'Nessun file selezionato';
+            }
+            
+        } catch (error) {
+            alert('❌ Errore durante l\'import: ' + (error?.message || String(error)));
+            console.error(error);
+        } finally {
+            try {
+                newBtn.innerHTML = window.app?.t ? window.app.t('csvImportBtn') : '📥 Importa CSV / Excel';
+            } catch {
+                newBtn.textContent = '📥 Importa CSV / Excel';
+            }
+            newBtn.disabled = false;
+        }
+    });
 }
+
 
 BudgetWise.prototype.clamp100 = function(x) {
   return Math.max(0, Math.min(100, x));
@@ -7478,59 +7482,6 @@ BudgetWise.prototype.handleUrlAction = function() {
 // ===== Premium modules helpers (SAFE GLOBAL) =====
 window.app = window.app || {};
 
-
-// ✅ PATCH: define missing premium helpers to avoid runtime crashes
-window.app.updateLicenseStatus = window.app.updateLicenseStatus || function () {
-    try {
-        // Prefer real instance if available
-        const inst = (window.BudgetWiseApp && typeof window.BudgetWiseApp === 'object') ? window.BudgetWiseApp : null;
-        const lic = (inst && inst.license) ? inst.license : (window.app && window.app.license ? window.app.license : null);
-
-        let status = 'free';
-        if (lic && typeof lic.getStatus === 'function') {
-            status = lic.getStatus() || 'free';
-        } else if (lic && typeof lic.hasFullPremiumAccess === 'function' && lic.hasFullPremiumAccess()) {
-            status = 'premium';
-        }
-
-        const badgeWrap = document.getElementById('licenseStatus');
-        if (badgeWrap) {
-            badgeWrap.classList.remove('free', 'trial', 'premium');
-            badgeWrap.classList.add(status);
-            const badge = badgeWrap.querySelector('.license-badge');
-            if (badge) {
-                badge.textContent = (status === 'premium') ? 'Premium' : (status === 'trial') ? 'Trial' : 'Free';
-            }
-        }
-
-        const banner = document.getElementById('premiumBanner');
-        if (banner) {
-            banner.style.display = (status === 'free') ? 'block' : 'none';
-        }
-
-        // Sync UI limits with license status
-        if (inst && typeof inst.applyFreeLimitsToUI === 'function') {
-            inst.applyFreeLimitsToUI();
-        }
-    } catch (e) {
-        console.warn('⚠️ updateLicenseStatus error:', e);
-    }
-};
-
-window.app.enablePremiumFeatures = window.app.enablePremiumFeatures || function () {
-    try {
-        const inst = (window.BudgetWiseApp && typeof window.BudgetWiseApp === 'object') ? window.BudgetWiseApp : null;
-        if (inst && typeof inst.applyFreeLimitsToUI === 'function') {
-            inst.applyFreeLimitsToUI();
-        }
-        const banner = document.getElementById('premiumBanner');
-        if (banner) banner.style.display = 'none';
-    } catch (e) {
-        console.warn('⚠️ enablePremiumFeatures error:', e);
-    }
-};
-
-
 // Merge translations into "this" (the BudgetWise app instance)
 window.app.mergeTranslations = function(extra) {
   if (!extra || typeof extra !== 'object') return;
@@ -7767,7 +7718,7 @@ window.app.getPremiumModuleTranslations = function() {
         };
 
         window.app.setupPremiumSystem = () => {
-            if (typeof window.app.updateLicenseStatus === 'function') window.app.updateLicenseStatus();
+            window.app.updateLicenseStatus();
             window.app.setupPremiumEventListeners();
             window.app.showPremiumBannerIfNeeded();
             window.app.premiumSetupDone = true;
@@ -7779,7 +7730,7 @@ window.app.getPremiumModuleTranslations = function() {
                 window.app.setupPremiumSystem();
             }
         }, 150);
-    
+    }
 // Esegui setup dopo l'inizializzazione dell'app
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', setupImportHandlers);
