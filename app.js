@@ -66,7 +66,7 @@ class BudgetWise {
         
         // ========== TRADUZIONI ==========
         this.translations = {
-             it: {
+            it: {
                 savingsWidgetTitle: 'Raggiungerai il tuo obiettivo',
                 savingsPotInputLabel: 'Risparmi iniziali (€)',
                 excelSheetPlaceholder: 'Carica un file Excel',
@@ -355,8 +355,11 @@ class BudgetWise {
                 aiActionLearnHow: '💡 Scopri come',
                 aiActionPlan: '📅 Pianifica',
                 features: {
+                    csvImport: '✅ Importazione CSV',
                     csvImport: '❌ Importazione CSV',
+                    aiAssistant: '✅ Assistente AI',
                     aiAssistant: '❌ Assistente AI',
+                    cloudSync: '✅ Sincronizzazione cloud',
                     cloudSync: '❌ Sincronizzazione cloud',
                     unlimitedTransactions: '✅ Transazioni illimitate',
                     unlimitedFixedExpenses: '✅ Spese fisse illimitate',
@@ -389,6 +392,7 @@ class BudgetWise {
                 upgrade: 'Upgrade',
                 free: '🆓 Free',
                 premium: '💎 Premium',
+                transactionsLimit: '30 transactions/month',
                 fixedExpensesLimit: '5 fixed expenses',
                 savingsPercentLimit: '15% max savings',
                 categoriesLimit: '3 base categories',
@@ -658,8 +662,11 @@ class BudgetWise {
                 aiActionLearnHow: '💡 Learn how',
                 aiActionPlan: '📅 Plan',
                 features: {
-                    csvImport: '❌ CSV Import',
+                    csvImport: '✅ CSV Import',
+                     csvImport: '❌ CSV Import',
+                    aiAssistant: '✅ AI Assistant',
                     aiAssistant: '❌ AI Assistant',
+                    cloudSync: '✅ Cloud Sync',
                     cloudSync: '❌ Cloud Sync',
                     unlimitedTransactions: '✅ Unlimited transactions',
                     unlimitedFixedExpenses: '✅ Unlimited fixed expenses',
@@ -690,13 +697,14 @@ class BudgetWise {
                 increaseToPercentToArriveEarlier: "Aumenta al {percent}% para llegar {months} meses antes!",
                 increaseToPercentToArriveEarlier_one: "Aumenta al {percent}% para llegar {months} mes antes!",
                 suggestionAppliedToast: "💡 Sugerencia aplicada: {percent}% de ahorro",
-                onboardingDemo: "✨ Cargar demo",
+                                onboardingDemo: "✨ Cargar demo",
                 loadDemo: "Cargar demo",
                 upgradeBanner: '🚀 Mejora a Premium',
                 upgradeBannerText: '¡Desbloquea funciones ilimitadas y el asistente IA!',
                 upgrade: 'Mejorar',
                 free: '🆓 Gratis',
                 premium: '💎 Premium',
+                transactionsLimit: '30 transacciones/mes',
                 fixedExpensesLimit: '5 gastos fijos',
                 savingsPercentLimit: '15% ahorro máx.',
                 categoriesLimit: '3 categorías básicas',
@@ -955,9 +963,12 @@ class BudgetWise {
                 endPeriod: 'Fin del período',
                 transactionCounter: 'Transacciones mensuales',
                 features: {
+                    csvImport: '✅ Importación CSV',
                     csvImport: '❌ Importación CSV',
                     aiAssistant: '❌ Asistente IA',
                     cloudSync: '❌ Sincronización en la nube',
+                    aiAssistant: '✅ Asistente IA',
+                    cloudSync: '✅ Sincronización en la nube',
                     unlimitedTransactions: '✅ Transacciones ilimitadas',
                     unlimitedFixedExpenses: '✅ Gastos fijos ilimitados',
                     savingsPercentUnlimited: '✅ Ahorro hasta 50%',
@@ -985,7 +996,7 @@ class BudgetWise {
                 upgrade: 'Passer à Premium',
                 free: '🆓 Gratuit',
                 premium: '💎 Premium',
-                transactionsLimit: '50 transactions/mois',
+                transactionsLimit: '30 transactions/mois',
                 fixedExpensesLimit: '5 dépenses fixes',
                 savingsPercentLimit: '15% épargne max',
                 categoriesLimit: '3 catégories de base',
@@ -1021,6 +1032,7 @@ class BudgetWise {
                 fixedPlanned: '⏳ Prévu',
                 fixedDue: 'Échéance',
                 fixedFound: 'Trouvé',
+                transactionsLimit: '50 transactions/mois',
                 budget: 'Budget journalier',
                 remaining: 'Reste',
                 days: 'Jours restants',
@@ -1249,9 +1261,12 @@ class BudgetWise {
                 endPeriod: 'Fin de période',
                 transactionCounter: 'Transactions mensuelles',
                 features: {
+                    csvImport: '✅ Importation CSV',
                     csvImport: '❌ Importation CSV',
                     aiAssistant: '❌ Assistant IA',
                     cloudSync: '❌ Synchronisation cloud',
+                    aiAssistant: '✅ Assistant IA',
+                    cloudSync: '✅ Synchronisation cloud',
                     unlimitedTransactions: '✅ Transactions illimitées',
                     unlimitedFixedExpenses: '✅ Dépenses fixes illimitées',
                     savingsPercentUnlimited: '✅ Épargne jusqu\'à 50%',
@@ -1264,55 +1279,69 @@ class BudgetWise {
                 }
             }
         };
-
+        
         this.init();
     }
 
-  initializeLicenseSystem() {
-    // ========== SISTEMA LICENZE ==========
-    if (typeof BudgetWiseLicense !== 'undefined') {
-        this.license = new BudgetWiseLicense();
-        console.log('✅ Sistema licenze inizializzato correttamente');
-    } else {
-        console.warn('⚠️ BudgetWiseLicense non disponibile, uso fallback');
-
-        // Fallback inline (DEVE essere permissivo, altrimenti blocca tutto)
-        this.license = {
-            isPremium: true,
-            trialUsed: true,
-            hasFullPremiumAccess: () => true,
-            getCurrentLimits: () => ({
-                maxTransactions: Infinity,
-                maxFixedExpenses: Infinity,
-                maxSavingsPercent: 50,
-                maxGoals: Infinity,
-                customCategories: true,
-                csvImport: true,
-                aiAssistant: 'advanced',
-                voiceRecognition: true,
-                cloudSync: false,
-                colorCustomization: true,
-                dateFormatCustom: true,
-                calendarExport: true,
-                categoryLearning: true,
-                advancedFixedFormat: true
-            }),
-            canUseFeature: () => true,
-            getMaxSavingsPercent: () => 50,
-            getUpgradeMessage: () => '',
-            isFeatureLocked: () => false
-        };
+    initializeLicenseSystem() {
+        // ========== SISTEMA LICENZE ==========
+        if (typeof BudgetWiseLicense !== 'undefined') {
+            this.license = new BudgetWiseLicense();
+            console.log('✅ Sistema licenze inizializzato correttamente');
+        } else {
+            console.warn('⚠️ BudgetWiseLicense non disponibile, uso fallback');
+            
+            // Fallback inline
+            this.license = {
+                isPremium: false,
+                trialUsed: false,
+                limits: {
+                    free: { 
+                        maxTransactions: 30, 
+                        maxFixedExpenses: 5,
+                        maxSavingsPercent: 15,
+                        maxCategories: 3, 
+                        csvImport: false,
+                        voiceRecognition: false,
+                        colorCustomization: false,
+                        advancedFixedFormat: false,
+                        calendarExport: false
+                    },
+                    premium: { 
+                        maxTransactions: Infinity, 
+                        maxFixedExpenses: Infinity,
+                        maxSavingsPercent: 50,
+                        maxCategories: Infinity, 
+                        csvImport: true,
+                        voiceRecognition: true,
+                        colorCustomization: true,
+                        advancedFixedFormat: true,
+                        calendarExport: true
+                    }
+                },
+                checkPremiumStatus: () => false,
+                getPlanInfo: () => ({ name: 'Free', status: 'Limitato' }),
+                hasFullPremiumAccess: () => false,
+                canUseFeature: (feature) => false,
+                canAddTransaction: (count) => count < 30,
+                canAddFixedExpense: (count) => count < 5,
+                getCurrentLimits: () => ({ 
+                    maxTransactions: 30, 
+                    maxFixedExpenses: 5,
+                    maxSavingsPercent: 15,
+                    maxCategories: 3, 
+                    csvImport: false,
+                    voiceRecognition: false,
+                    colorCustomization: false,
+                    advancedFixedFormat: false,
+                    calendarExport: false
+                }),
+                getMaxSavingsPercent: () => 15,
+                getUpgradeMessage: (feature) => 'Questa funzionalità è disponibile nella versione Premium! 💎',
+                isFeatureLocked: () => true
+            };
+        }
     }
-
-    // Refresh UI after license init (DEV bypass / trial / premium)
-    try {
-        this.updateUI();
-        this.applyLanguage();
-        this.updateChart();
-    } catch (e) {
-        console.warn('UI refresh after license init skipped:', e);
-    }
-}
 
     // ========== SISTEMA LIMITI FREE/PREMIUM ==========
     calculateMonthlyTransactions() {
@@ -1565,26 +1594,7 @@ class BudgetWise {
         // Otherwise we would "freeze" light colors as inline CSS variables and dark mode would barely change.
         if (localStorage.getItem('budgetwise-custom-colors')) {
             this.applyCustomColors();
-        
-
-// ===== Report View (safe) =====
-const openReportBtn = document.getElementById('openReport');
-if (openReportBtn) openReportBtn.addEventListener('click', () => this.openReport());
-
-const closeReportBtn = document.getElementById('closeReport');
-if (closeReportBtn) closeReportBtn.addEventListener('click', () => this.closeReport());
-
-const printReportBtn = document.getElementById('printReport');
-if (printReportBtn) printReportBtn.addEventListener('click', () => window.print());
-
-const downloadPdfBtn = document.getElementById('downloadReportPdf');
-if (downloadPdfBtn) downloadPdfBtn.addEventListener('click', () => this.downloadReportPdf?.());
-
-const overlay = document.getElementById('reportOverlay');
-if (overlay) overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) this.closeReport();
-});
-} else {
+        } else {
             this.clearThemeInlineOverrides();
         }
         this.setupColorPickers();
@@ -1610,10 +1620,7 @@ if (overlay) overlay.addEventListener('click', (e) => {
         if (salary && salary.date) return this.normalizeIsoDate(salary.date);
         const today = new Date();
         return today.toISOString().split('T')[0];
-    
-        // ===== Premium modules (safe) =====
-        try { this.renderWiseScoreHome(); } catch(e) { console.warn('WiseScore render skipped', e); }
-}
+    }
 
     getDefaultPeriodEnd() {
         // Default: next salary date (one month after last salary), otherwise +28 days
@@ -3338,7 +3345,7 @@ updateFixedStatusHome() {
         ctx.clearRect(0, 0, width, height);
         if (data.length === 0 || data.every(v => v === 0)) return;
         const max = Math.max(...data, 1);
-const min = Math.min(...data, 0);
+        const min = Math.min(...data, 0);
         const range = max - min || 1;
         const points = data.map((v, i) => {
             const x = (i / (data.length - 1)) * width;
@@ -4720,8 +4727,8 @@ document.documentElement.style.setProperty('--accent-gradient',
 
     // ========== GESTIONE CATEGORIE PERSONALIZZATE ==========
     getAllCategories() {
-    return [...this.defaultCategories, ...this.customCategories];
-}
+        return [...this.defaultCategories, ...this.customCategories];
+    }
     
     saveCustomCategories() {
         localStorage.setItem('budgetwise-custom-categories', JSON.stringify(this.customCategories));
@@ -5243,7 +5250,7 @@ const autoCompleteIdentical = (startIndex, newCategory, description) => {
 
                             if (tempIncomes.length > 0) {
                                 if (!this.data.incomes) this.data.incomes = [];
-                               this.data.incomes.push(...tempIncomes);
+                                this.data.incomes.push(...tempIncomes);
                                 addedIncomes = tempIncomes.length;
                             }
 
@@ -6445,688 +6452,8 @@ function setupImportHandlers() {
             newBtn.disabled = false;
         }
     });
-}
-
-
-BudgetWise.prototype.clamp100 = function(x) {
-  return Math.max(0, Math.min(100, x));
-}
-BudgetWise.prototype.getWiseScoreModel = function() {
-    const income = this.calculateTotalIncome?.() ?? 0;
-    const fixed = this.calculateTotalFixedExpenses?.() ?? 0;
-    const fixedUnpaid = this.calculateTotalFixedExpensesUnpaid?.() ?? 0;
-    const variable = this.calculateTotalVariableExpenses?.() ?? 0;
-
-    const spend = fixed + variable;
-    const net = income - spend;
-
-    const target = (this.data.savingsPercent || 0) / 100;
-    const savingsRate = income > 0 ? Math.max(0, net / income) : 0;
-
-    // Pillars (0..100)
-    let stability = income > 0 ? (1 - (fixed / income)) * 100 : 0;
-    stability = this.clamp100(stability - (income > 0 ? (fixedUnpaid / income) * 120 : 0));
-
-    const targetBase = Math.max(0.05, target || 0.10);
-    let discipline = (savingsRate / targetBase) * 100;
-    discipline = this.clamp100(discipline);
-
-    const savingsPot = Number(this.data.savingsPot || 0);
-    const months = spend > 0 ? (savingsPot / spend) : (savingsPot > 0 ? 3 : 0);
-    let resilience = this.clamp100((months / 3) * 100);
-
-    // Overall
-    let score = 0.45 * stability + 0.35 * discipline + 0.20 * resilience;
-    if (net < 0) score -= 8;
-    score = Math.round(this.clamp100(score));
-
-    const insightKey =
-        score >= 85 ? 'wisescoreInsightExcellent' :
-        score >= 70 ? 'wisescoreInsightGood' :
-        score >= 50 ? 'wisescoreInsightOk' :
-        'wisescoreInsightBad';
-
-    return {
-        income, fixed, fixedUnpaid, variable, spend, net, savingsRate, target,
-        savingsPot, months,
-        pillars: {
-            stability: Math.round(stability),
-            discipline: Math.round(discipline),
-            resilience: Math.round(resilience)
-        },
-        score,
-        insight: this.t(insightKey),
-        timeline: this.buildWiseScoreTimeline({ income, fixedUnpaid, variable, savingsRate, target })
-    };
-}
-
-BudgetWise.prototype.buildWiseScoreTimeline = function({ income, fixedUnpaid, variable, savingsRate, target }) {
-    const items = [];
-    const start = this.normalizeIsoDate?.(this.data.periodStart) || this.data.periodStart;
-    const end = this.normalizeIsoDate?.(this.data.periodEnd) || this.data.periodEnd;
-
-    if (start) items.push({ ico:'📍', title:this.t('eventPeriodStart'), meta:start, desc:'' });
-
-    if (income > 0) items.push({
-        ico:'🏦',
-        title:this.t('eventIncome'),
-        meta:this.formatCurrency?.(income) ?? income,
-        desc:''
-    });
-
-    if (fixedUnpaid > 0) items.push({
-        ico:'⚠️',
-        title:this.t('eventUnpaidFixed'),
-        meta:this.formatCurrency?.(fixedUnpaid) ?? fixedUnpaid,
-        desc:''
-    });
-
-    const peak = this.getPeakVariableDay?.();
-    if (peak && peak.amount > 0) items.push({
-        ico:'🧾',
-        title:this.t('eventPeakSpend'),
-        meta:`${peak.date} · ${this.formatCurrency?.(peak.amount) ?? peak.amount}`,
-        desc: peak.topName ? peak.topName : ''
-    });
-
-    if (income > 0) {
-        const t = Math.max(0.05, target || 0.10);
-        const pace = savingsRate >= t ? '✅' : (savingsRate >= t*0.6 ? '➖' : '❌');
-        items.push({
-            ico: pace,
-            title:this.t('eventSavings'),
-            meta:`${Math.round(savingsRate*100)}%`,
-            desc:''
-        });
-    }
-
-    if (end) items.push({ ico:'🏁', title:this.t('eventPeriodEnd'), meta:end, desc:'' });
-
-    return items;
-}
-
-BudgetWise.prototype.getPeakVariableDay = function() {
-    if (!this.data.variableExpenses || typeof this.data.variableExpenses !== 'object') return null;
-    let best = { date:'', amount:0, topName:'' };
-    for (const [date, arr] of Object.entries(this.data.variableExpenses)) {
-        const d = this.normalizeIsoDate?.(date);
-        if (!d || !this.isDateInPeriod?.(d)) continue;
-        if (!Array.isArray(arr) || arr.length === 0) continue;
-        const sum = arr.reduce((s,e)=>s+(e.amount||0),0);
-        if (sum > best.amount) {
-            const top = [...arr].sort((a,b)=>(b.amount||0)-(a.amount||0))[0];
-            best = { date:d, amount:sum, topName: top?.name ? `${top.name}` : '' };
-        }
-    }
-    return best.amount>0 ? best : null;
-}
-
-BudgetWise.prototype.renderWiseScoreHome = function() {
-    const card = document.getElementById('wiseScoreCardHome');
-    if (!card) return;
-
-    const m = this.getWiseScoreModel();
-    const hasData = (m.income + m.fixed + m.variable) > 0;
-
-    if (!hasData) { card.style.display = 'none'; return; }
-    card.style.display = '';
-
-    const scoreEl = document.getElementById('wiseScoreValue');
-    const subEl = document.getElementById('wiseScoreSub');
-    const pillEl = document.getElementById('wiseScorePill');
-
-    if (scoreEl) scoreEl.textContent = String(m.score);
-    if (subEl) subEl.textContent = m.insight;
-
-    if (pillEl) {
-        const label = m.score >= 85 ? 'A' : m.score >= 70 ? 'B' : m.score >= 50 ? 'C' : 'D';
-        pillEl.textContent = `Grade ${label}`;
-    }
-
-    const setPillar = (fillId, valId, value) => {
-        const fill = document.getElementById(fillId);
-        const val = document.getElementById(valId);
-        if (fill) fill.style.width = `${this.clamp100(value)}%`;
-        if (val) val.textContent = `${this.clamp100(value)}%`;
-    };
-    setPillar('pillarStabilityFill','pillarStabilityVal', m.pillars.stability);
-    setPillar('pillarDisciplineFill','pillarDisciplineVal', m.pillars.discipline);
-    setPillar('pillarResilienceFill','pillarResilienceVal', m.pillars.resilience);
-
-    const tl = document.getElementById('wiseScoreTimeline');
-    if (tl) {
-        tl.innerHTML = (m.timeline || []).map(it => `
-            <div class="timeline-item">
-                <div class="timeline-ico">${it.ico || '•'}</div>
-                <div>
-                    <div class="timeline-title">
-                        <span>${this.escapeHtml?.(it.title) ?? it.title}</span>
-                        <span class="timeline-meta">${this.escapeHtml?.(it.meta) ?? it.meta}</span>
-                    </div>
-                    ${(it.desc ? `<div class="timeline-desc">${this.escapeHtml?.(it.desc) ?? it.desc}</div>` : '')}
-                </div>
-            </div>
-        `).join('');
-    }
-}
-
-// ===== Premium Report View =====
-BudgetWise.prototype.openReport = function() {
-    const overlay = document.getElementById('reportOverlay');
-    const content = document.getElementById('reportContent');
-    if (!overlay || !content) return;
-
-    content.innerHTML = this.buildReportHtml();
-    overlay.style.display = '';
-    overlay.setAttribute('aria-hidden', 'false');
-
-    // Apply i18n on freshly injected DOM
-    this.applyLanguage?.();
-}
-
-BudgetWise.prototype.closeReport = function() {
-    const overlay = document.getElementById('reportOverlay');
-    if (!overlay) return;
-    overlay.style.display = 'none';
-    overlay.setAttribute('aria-hidden', 'true');
-}
-
-BudgetWise.prototype.loadPdfLib = async function() {
-    // Lazy-load jsPDF from CDN only when needed (frontend-only).
-    // If the user is offline, we gracefully fallback to Print -> Save as PDF.
-    if (window.jspdf && window.jspdf.jsPDF) return true;
-
-    const loadScript = (src) => new Promise((resolve) => {
-        const s = document.createElement('script');
-        s.src = src;
-        s.async = true;
-        s.onload = () => resolve(true);
-        s.onerror = () => resolve(false);
-        document.head.appendChild(s);
-    });
-
-    // Prefer a stable CDN. Two attempts for resilience.
-    const urls = [
-        'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
-        'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'
-    ];
-
-    for (const url of urls) {
-        // eslint-disable-next-line no-await-in-loop
-        const ok = await loadScript(url);
-        if (ok && window.jspdf && window.jspdf.jsPDF) return true;
-    }
-    return !!(window.jspdf && window.jspdf.jsPDF);
-}
-
-BudgetWise.prototype.downloadReportPdf = async function() {
-    try {
-        const ok = await this.loadPdfLib();
-        if (!ok) {
-            alert(this.t('pdfLibMissing'));
-            return;
-        }
-
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-// ===== ULTRA PREMIUM COVER =====
-try {
-  const lang = this.lang || 'it';
-
-  const coverTitle = {
-    it: 'Executive Report',
-    en: 'Executive Report',
-    es: 'Informe Ejecutivo',
-    fr: 'Rapport Exécutif'
-  }[lang] || 'Executive Report';
-
-  const periodLabel = {
-    it: 'Periodo',
-    en: 'Period',
-    es: 'Periodo',
-    fr: 'Période'
-  }[lang] || 'Period';
-
-  if (typeof drawUltraPremiumCover === 'function') {
-    await drawUltraPremiumCover(doc, {
-      lang,
-      title: coverTitle,
-      periodLabel,
-      periodValue: '', // volendo dopo lo mettiamo col "period" che calcoli sotto
-      logoUrl: 'assets/brand/budgetwise_lockup_dark.png',
-      watermarkUrl: 'assets/brand/ff_watermark_white.png',
-      footer: 'Generated by WiseScore™',
-      subtitle: 'Decision Intelligence Platform',
-    });
-
-    doc.addPage();
-  }
-} catch (e) {
-  console.warn('Cover skipped:', e);
-}
-        const m = this.getWiseScoreModel();
-        const start = this.normalizeIsoDate?.(this.data.periodStart) || this.data.periodStart;
-        const end = this.normalizeIsoDate?.(this.data.periodEnd) || this.data.periodEnd;
-        const period = (start && end) ? `${start} → ${end}` : (start || end || '—');
-
-        // Layout helpers
-        const page = { w: doc.internal.pageSize.getWidth(), h: doc.internal.pageSize.getHeight() };
-        const margin = 48;
-        let y = margin;
-
-        const addPageIfNeeded = (nextY) => {
-            if (nextY > page.h - margin) {
-                doc.addPage();
-                y = margin;
-            }
-        };
-
-        const title = 'BudgetWise – Decision Intelligence Platform';
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(18);
-        doc.text(title, margin, y);
-        y += 22;
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(11);
-        doc.text(`${this.t('periodLabel')}: ${period}`, margin, y);
-        y += 18;
-
-        // WiseScore block
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(13);
-        doc.text(this.t('reportSectionWiseScore'), margin, y);
-        y += 12;
-
-        doc.setDrawColor(220);
-        doc.setLineWidth(1);
-        doc.roundedRect(margin, y, page.w - margin*2, 86, 10, 10);
-        y += 24;
-
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(32);
-        doc.text(String(m.score), margin + 16, y + 26);
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(11);
-        doc.text((m.insight || '').slice(0, 120), margin + 86, y + 10, { maxWidth: page.w - margin*2 - 110 });
-
-        // Pillars
-        const pillarY = y + 40;
-        const barW = 140;
-        const barH = 8;
-        const px = margin + 86;
-
-        const drawPillar = (label, value, idx) => {
-            const yy = pillarY + idx*18;
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(10);
-            doc.text(`${label}: ${Math.round(value)}/100`, px, yy);
-            doc.setDrawColor(220);
-            doc.rect(px + 130, yy - 7, barW, barH);
-            doc.setFillColor(30, 30, 30);
-            doc.rect(px + 130, yy - 7, barW * Math.max(0, Math.min(1, value/100)), barH, 'F');
-        };
-
-        drawPillar(this.t('pillarStability'), m.pillars.stability, 0);
-        drawPillar(this.t('pillarDiscipline'), m.pillars.discipline, 1);
-        drawPillar(this.t('pillarResilience'), m.pillars.resilience, 2);
-
-        y += 86 + 18;
-
-        // Summary KPIs
-        addPageIfNeeded(y + 110);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(13);
-        doc.text(this.t('reportSectionSummary'), margin, y);
-        y += 12;
-
-        const kpis = [
-            [this.t('kpiIncome'), this.formatCurrency?.(m.income) ?? String(m.income)],
-            [this.t('kpiFixed'), this.formatCurrency?.(m.fixed) ?? String(m.fixed)],
-            [this.t('kpiVariable'), this.formatCurrency?.(m.variable) ?? String(m.variable)],
-            [this.t('kpiNet'), this.formatCurrency?.(m.net) ?? String(m.net)],
-        ];
-
-        const boxW = (page.w - margin*2 - 12) / 2;
-        const boxH = 52;
-
-        for (let i = 0; i < kpis.length; i++) {
-            const col = i % 2;
-            const row = Math.floor(i / 2);
-            const bx = margin + col * (boxW + 12);
-            const by = y + row * (boxH + 12);
-
-            doc.setDrawColor(220);
-            doc.roundedRect(bx, by, boxW, boxH, 10, 10);
-
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(10);
-            doc.text(kpis[i][0], bx + 14, by + 18);
-
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(14);
-            doc.text(kpis[i][1], bx + 14, by + 38);
-        }
-        y += (boxH + 12) * 2 + 16;
-
-
-        // Detailed tables
-        const drawTable = (titleText, headers, rows) => {
-            addPageIfNeeded(y + 40);
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(12);
-            doc.text(titleText, margin, y);
-            y += 14;
-
-            const tableX = margin;
-            const tableW = page.w - margin * 2;
-            const rowH = 16;
-
-            // Column widths (sum = 1)
-            const ratios = [0.14, 0.38, 0.22, 0.12, 0.14]; // date, desc, category, status, amount
-            const colW = ratios.map(r => tableW * r);
-
-            const drawHeader = () => {
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(9);
-                doc.setDrawColor(220);
-                doc.setFillColor(245, 245, 245);
-                let xx = tableX;
-                for (let i = 0; i < headers.length; i++) {
-                    doc.rect(xx, y, colW[i], rowH, 'FD');
-                    doc.text(String(headers[i] || ''), xx + 6, y + 11, { maxWidth: colW[i] - 12 });
-                    xx += colW[i];
-                }
-                y += rowH;
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(9);
-            };
-
-            drawHeader();
-
-            const drawRow = (cells) => {
-                if (y + rowH > page.h - margin) {
-                    doc.addPage();
-                    y = margin;
-                    drawHeader();
-                }
-                let xx = tableX;
-                for (let i = 0; i < headers.length; i++) {
-                    doc.setDrawColor(235);
-                    doc.rect(xx, y, colW[i], rowH);
-                    const txt = (cells[i] ?? '').toString();
-                    const alignRight = (i === headers.length - 1);
-                    if (alignRight) {
-                        doc.text(txt, xx + colW[i] - 6, y + 11, { align: 'right', maxWidth: colW[i] - 12 });
-                    } else {
-                        doc.text(txt, xx + 6, y + 11, { maxWidth: colW[i] - 12 });
-                    }
-                    xx += colW[i];
-                }
-                y += rowH;
-            };
-
-            if (!rows || rows.length === 0) {
-                drawRow([this.t('noData'), '—', '—', '—', '—']);
-                y += 8;
-                return;
-            }
-
-            rows.forEach(r => drawRow(r));
-            y += 10;
-        };
-
-        addPageIfNeeded(y + 60);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(13);
-        doc.text(this.t('reportSectionDetails'), margin, y);
-        y += 14;
-
-        const hdr = [
-            this.t('colDate'),
-            this.t('colDescription'),
-            this.t('colCategory'),
-            this.t('colStatus'),
-            this.t('colAmount'),
-        ];
-
-        // Incomes (array)
-        const incomes = (Array.isArray(this.data.incomes) ? this.data.incomes : [])
-            .filter(i => i && i.date && (!start || i.date >= start) && (!end || i.date <= end))
-            .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-
-        const incomeRows = incomes.map(i => [
-            (i.date || '—'),
-            (i.desc || i.name || '—'),
-            (this.t('categoryIncome') || '—'),
-            '—',
-            this.formatCurrency?.(Number(i.amount || 0)) ?? String(i.amount || 0),
-        ]);
-
-        drawTable(this.t('tableIncomes'), hdr, incomeRows);
-
-        // Fixed occurrences (paid/planned)
-        const occs = (this.getFixedOccurrencesInPeriod?.() || []);
-        const fixedRows = occs.map(o => [
-            (o.dueDate || '—'),
-            (o.name || '—'),
-            this.t('categoryFixed') || '—',
-            o.paid ? this.t('fixedPaid') : this.t('fixedPlanned'),
-            this.formatCurrency?.(Number(o.amount || 0)) ?? String(o.amount || 0),
-        ]);
-
-        drawTable(this.t('tableFixed'), hdr, fixedRows);
-
-        // Variable expenses (flat object)
-        const vars = (this.getVariableExpensesInPeriodFlat?.() || [])
-            .slice()
-            .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-
-        const varRows = vars.map(v => [
-            (v.date || '—'),
-            (v.name || '—'),
-            (v.category || this.t('uncategorized') || '—'),
-            '—',
-            this.formatCurrency?.(Number(v.amount || 0)) ?? String(v.amount || 0),
-        ]);
-
-        drawTable(this.t('tableVariable'), hdr, varRows);
-
-        // Timeline
-        addPageIfNeeded(y + 40);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(13);
-        doc.text(this.t('wisescoreTimeline'), margin, y);
-        y += 14;
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-
-        const items = (m.timeline || []);
-        for (const it of items) {
-            const line = `${it.ico || '•'}  ${it.title}${it.meta ? ' — ' + it.meta : ''}`;
-            addPageIfNeeded(y + 36);
-            doc.text(line, margin, y, { maxWidth: page.w - margin*2 });
-            y += 14;
-            if (it.desc) {
-                doc.setFontSize(9);
-                doc.text(String(it.desc), margin + 14, y, { maxWidth: page.w - margin*2 - 14 });
-                doc.setFontSize(10);
-                y += 14;
-            }
-            y += 6;
-        }
-
-        // Footer
-        const stamp = new Date().toISOString().slice(0, 10);
-        doc.setFontSize(9);
-        doc.setTextColor(120);
-        doc.text(`WiseMind™ / WiseScore™ • ${stamp}`, margin, page.h - 24);
-
-        doc.save(`BudgetWise_Report_${(start||'')}_${(end||'')}.pdf`);
-    } catch (e) {
-        console.error(e);
-        alert(this.t('pdfLibMissing'));
-    }
-}
-
-BudgetWise.prototype.buildReportHtml = function() {
-    const m = this.getWiseScoreModel();
-    const start = this.normalizeIsoDate?.(this.data.periodStart) || this.data.periodStart;
-    const end = this.normalizeIsoDate?.(this.data.periodEnd) || this.data.periodEnd;
-    const period = (start && end) ? `${start} → ${end}` : (start || end || '—');
-
-    const kpi = (labelKey, value, note='') => `
-        <div class="kpi">
-            <div class="kpi-label">${this.t(labelKey)}</div>
-            <div class="kpi-value">${this.formatCurrency?.(value) ?? value}</div>
-            ${note ? `<div class="kpi-note">${note}</div>` : ''}
-        </div>
-    `;
-
-    const timelineHtml = (m.timeline || []).map(it => `
-        <div class="timeline-item">
-            <div class="timeline-ico">${it.ico || '•'}</div>
-            <div>
-                <div class="timeline-title">
-                    <span>${this.escapeHtml?.(it.title) ?? it.title}</span>
-                    <span class="timeline-meta">${this.escapeHtml?.(it.meta) ?? it.meta}</span>
-                </div>
-                ${(it.desc ? `<div class="timeline-desc">${this.escapeHtml?.(it.desc) ?? it.desc}</div>` : '')}
-            </div>
-        </div>
-    `).join('');
-
-    return `
-        <div class="report-section">
-            <h3>${this.t('reportSectionSummary')}</h3>
-            <div class="report-kpis">
-                <div class="kpi">
-                        <div class="kpi-label">${this.t('periodLabel')}</div>
-                        <div class="kpi-value">${this.escapeHtml?.(period) ?? period}</div>
-                        <div class="kpi-note"></div>
-                    </div>
-                ${kpi('kpiIncome', m.income)}
-                ${kpi('kpiFixed', m.fixed, m.fixedUnpaid>0 ? `${this.t('eventUnpaidFixed')}: ${this.formatCurrency?.(m.fixedUnpaid) ?? m.fixedUnpaid}` : '')}
-                ${kpi('kpiNet', m.net)}
-            </div>
-        </div>
-
-        <div class="report-section">
-            <h3>${this.t('reportSectionWiseScore')}</h3>
-            <div class="wisescore-grid">
-                <div class="wisescore-main">
-                    <div class="wisescore-value">${m.score}</div>
-                    <div class="wisescore-sub">${this.escapeHtml?.(m.insight) ?? m.insight}</div>
-                </div>
-                <div class="wisescore-pillars">
-                    <div class="pillar">
-                        <div class="pillar-label">${this.t('pillarStability')}</div>
-                        <div class="pillar-bar"><div class="pillar-fill" style="width:${this.clamp100(m.pillars.stability)}%"></div></div>
-                        <div class="pillar-val">${this.clamp100(m.pillars.stability)}%</div>
-                    </div>
-                    <div class="pillar">
-                        <div class="pillar-label">${this.t('pillarDiscipline')}</div>
-                        <div class="pillar-bar"><div class="pillar-fill" style="width:${this.clamp100(m.pillars.discipline)}%"></div></div>
-                        <div class="pillar-val">${this.clamp100(m.pillars.discipline)}%</div>
-                    </div>
-                    <div class="pillar">
-                        <div class="pillar-label">${this.t('pillarResilience')}</div>
-                        <div class="pillar-bar"><div class="pillar-fill" style="width:${this.clamp100(m.pillars.resilience)}%"></div></div>
-                        <div class="pillar-val">${this.clamp100(m.pillars.resilience)}%</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="report-section">
-            <h3>${this.t('reportSectionTotals')}</h3>
-            <div class="report-kpis">
-                ${kpi('kpiIncome', m.income)}
-                ${kpi('kpiFixed', m.fixed)}
-                ${kpi('kpiVariable', m.variable)}
-                ${kpi('kpiNet', m.net)}
-            </div>
-        </div>
-
-        <div class="report-section">
-            <h3>${this.t('reportSectionTimeline')}</h3>
-            <div class="timeline">${timelineHtml}</div>
-        </div>
-    `;
-}
-
-BudgetWise.prototype.handleUrlAction = function() {
-    try {
-        const u = new URL(window.location.href);
-        const action = u.searchParams.get('action');
-        if (action === 'report') {
-            // open after UI ready
-            setTimeout(() => this.openReport(), 150);
-        }
-    } catch {}
-}
-
-// ===== Premium modules helpers (SAFE GLOBAL) =====
-window.app = window.app || {};
-
-// Merge translations into "this" (the BudgetWise app instance)
-window.app.mergeTranslations = function(extra) {
-  if (!extra || typeof extra !== 'object') return;
-  if (!this.translations || typeof this.translations !== 'object') this.translations = {};
-  for (const [lang, dict] of Object.entries(extra)) {
-    if (!this.translations[lang]) this.translations[lang] = {};
-    Object.assign(this.translations[lang], dict || {});
-  }
-};
-
-// Premium translations ONLY (Report / WiseScore / PDF)
-window.app.getPremiumModuleTranslations = function() {
-  return {
-    it: {
-      reportTitle: 'Report Premium',
-      print: 'Stampa',
-      reportDownloadPdf: 'Scarica PDF',
-      pdfLibMissing: 'Libreria PDF non disponibile (offline). Usa Stampa → Salva come PDF.',
-      close: 'Chiudi',
-      reportSectionSummary: 'Sintesi periodo',
-      reportSectionWiseScore: 'WiseScore™',
-      reportSectionTotals: 'Totali periodo',
-      reportSectionTimeline: 'Timeline WiseScore™',
-      reportSectionDetails: 'Dettaglio',
-      tableIncomes: 'Entrate – dettaglio',
-      tableFixed: 'Spese fisse – scadenze',
-      tableVariable: 'Spese variabili – dettaglio',
-      colDate: 'Data',
-      colDescription: 'Voce',
-      colCategory: 'Categoria',
-      colStatus: 'Stato',
-      colAmount: 'Importo',
-      noData: 'Nessun dato',
-      periodLabel: 'Periodo',
-      kpiIncome: 'Entrate',
-      kpiFixed: 'Fisse',
-      kpiVariable: 'Variabili',
-      kpiNet: 'Saldo',
-      wisescoreTitle: 'WiseScore™',
-      wisescoreInsightExcellent: 'Eccellente controllo',
-      wisescoreInsightGood: 'Buon equilibrio',
-      wisescoreInsightOk: 'Serve ottimizzare',
-      wisescoreInsightBad: 'Attenzione: pressione alta',
-      pillarStability: 'Stabilità',
-      pillarDiscipline: 'Disciplina',
-      pillarResilience: 'Resilienza',
-      eventPeriodStart: 'Inizio periodo',
-      eventPeriodEnd: 'Fine periodo',
-      eventIncome: 'Entrate rilevate',
-      eventUnpaidFixed: 'Fisse non coperte',
-      eventPeakSpend: 'Picco spese variabili',
-      eventSavings: 'Ritmo risparmio'
-    }
-  };
-};
-// ========== METODI PREMIUM ==========
+    
+    // ========== METODI PREMIUM ==========
     if (window.app && !window.app.premiumSetupDone) {
         window.app.updateLicenseStatus = () => {
             if (!window.app.license) {
@@ -7296,140 +6623,11 @@ window.app.getPremiumModuleTranslations = function() {
             }
         }, 150);
     }
+}
+
 // Esegui setup dopo l'inizializzazione dell'app
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', setupImportHandlers);
 } else {
     setTimeout(setupImportHandlers, 100);
 }
-// Cover Ultra Premium — helper for jsPDF
-// Usage:
-//   await drawUltraPremiumCover(doc, {
-//     lang: state?.lang || 'en',
-//     title: i18n('cover.title'),
-//     periodLabel: i18n('cover.period'),
-//     periodValue: '2026-01-01 → 2026-03-01',
-//     logoUrl: 'assets/brand/budgetwise_lockup_dark.png',
-//     watermarkUrl: 'assets/brand/ff_watermark_white.png',
-//   });
-//
-// Works frontend-only. Designed to be "drop-in" without breaking existing export code.
-async function drawUltraPremiumCover(doc, opts = {}) {
-  const {
-    lang = 'en',
-    title = 'Decision Report',
-    periodLabel = 'Period',
-    periodValue = '',
-    footer = 'Generated by WiseScore™',
-    logoUrl = 'assets/brand/budgetwise_lockup_dark.png',
-    watermarkUrl = 'assets/brand/ff_watermark_white.png',
-    brandName = 'BudgetWise',
-    subtitle = 'Decision Intelligence Platform',
-  } = opts;
-
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
-
-  const GState = (doc && doc.GState) || (window.jspdf && window.jspdf.GState) || null;
-  const setOpacity = (v) => {
-    try {
-      if (doc.setGState && GState) doc.setGState(new GState({ opacity: v }));
-    } catch {}
-  };
-
-  // === Background (executive dark blue) ===
-  doc.setFillColor(6, 18, 42);
-  doc.rect(0, 0, pageW, pageH, 'F');
-
-  // Soft radial-ish glow (simulated with big translucent circles)
-  doc.setFillColor(46, 123, 255);
-  setOpacity(0.12);
-  doc.circle(pageW * 0.62, pageH * 0.38, Math.max(pageW, pageH) * 0.45, 'F');
-  setOpacity(0.06);
-  doc.circle(pageW * 0.30, pageH * 0.20, Math.max(pageW, pageH) * 0.38, 'F');
-  setOpacity(1);
-
-  // === Watermark (FF monogram, white ~6% opacity) ===
-  try {
-    const wm = await fetchAsDataURL(watermarkUrl);
-    setOpacity(0.06);
-    const wmW = pageW * 0.72;
-    const wmH = wmW;
-    doc.addImage(
-      wm,
-      'PNG',
-      (pageW - wmW) / 2,
-      (pageH - wmH) / 2 + pageH * 0.04,
-      wmW,
-      wmH,
-      undefined,
-      'FAST'
-    );
-  } catch (_) {
-    // ignore watermark if unavailable
-  }
-  setOpacity(1);
-
-  // === Logo (top center) ===
-  let logoH = 0;
-  try {
-    const logo = await fetchAsDataURL(logoUrl);
-    const logoW = pageW * 0.64;
-    logoH = logoW * 0.28; // lockup ratio (approx)
-    doc.addImage(logo, 'PNG', (pageW - logoW) / 2, pageH * 0.10, logoW, logoH, undefined, 'FAST');
-  } catch (_) {
-    // fallback: text brand
-    doc.setTextColor(242, 246, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(28);
-    doc.text(brandName, pageW / 2, pageH * 0.13, { align: 'center' });
-  }
-
-  // Subtitle (Decision Intelligence Platform)
-  doc.setTextColor(242, 246, 255);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.text(subtitle.toUpperCase(), pageW / 2, pageH * 0.10 + (logoH || 0) + 18, { align: 'center' });
-
-  // === Center title ===
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(34);
-  doc.setTextColor(242, 246, 255);
-  doc.text(title, pageW / 2, pageH * 0.52, { align: 'center', maxWidth: pageW * 0.84 });
-
-  // Period chip (optional)
-  if (periodValue) {
-    const chipY = pageH * 0.60;
-
-    setOpacity(0.18);
-    doc.setFillColor(0, 0, 0);
-    doc.roundedRect(pageW * 0.22, chipY - 14, pageW * 0.56, 28, 6, 6, 'F');
-    setOpacity(1);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(242, 246, 255);
-    doc.text(`${periodLabel.toUpperCase()}  ${periodValue}`, pageW / 2, chipY + 4, { align: 'center' });
-  }
-
-  // === Footer ===
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(242, 246, 255);
-  setOpacity(0.65);
-  doc.text(footer.toUpperCase(), pageW / 2, pageH - 22, { align: 'center' });
-  setOpacity(1);
-}
-
-async function fetchAsDataURL(url) {
-  const res = await fetch(url, { cache: 'force-cache' });
-  if (!res.ok) throw new Error('Failed to load asset: ' + url);
-  const blob = await res.blob();
-  return await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
-
