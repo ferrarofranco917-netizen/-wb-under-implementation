@@ -1285,20 +1285,6 @@ upgradeBanner: '🚀 Passez à Premium',
             }
         };
 
-        // === Report overlay i18n (safety net) ===
-        try {
-            this.translations = this.translations || {};
-            this.translations.it = this.translations.it || {};
-            if (!this.translations.it.reportTitle) this.translations.it.reportTitle = 'Report Premium';
-            if (!this.translations.it.reportDownloadPdf) this.translations.it.reportDownloadPdf = '⬇️ PDF';
-            if (!this.translations.it.print) this.translations.it.print = 'Stampa';
-            // EN fallback (minimal)
-            this.translations.en = this.translations.en || {};
-            if (!this.translations.en.reportTitle) this.translations.en.reportTitle = 'Premium Report';
-            if (!this.translations.en.reportDownloadPdf) this.translations.en.reportDownloadPdf = '⬇️ PDF';
-            if (!this.translations.en.print) this.translations.en.print = 'Print';
-        } catch(e) {}
-
         this.init();
     }
 
@@ -1618,10 +1604,7 @@ upgradeBanner: '🚀 Passez à Premium',
 
         const toggle = document.getElementById('showAllExpensesToggle');
         if (toggle) toggle.checked = !!this.showAllExpenses;
-        
-        // ===== WiseScore Home: render safe =====
-        try { this.renderWiseScoreHome(); } catch(e) { console.warn('WiseScore Home render skipped', e); }
-this.populateCategoryFilter();
+        this.populateCategoryFilter();
     }
 
     getDefaultPeriodStart() {
@@ -1630,7 +1613,10 @@ this.populateCategoryFilter();
         if (salary && salary.date) return this.normalizeIsoDate(salary.date);
         const today = new Date();
         return today.toISOString().split('T')[0];
-    }
+    
+        // ===== Premium modules (safe) =====
+        try { this.renderWiseScoreHome(); } catch(e) { console.warn('WiseScore render skipped', e); }
+}
 
     getDefaultPeriodEnd() {
         // Default: next salary date (one month after last salary), otherwise +28 days
@@ -3401,17 +3387,13 @@ const min = Math.min(...data, 0);
                 const printBtn = e.target.closest('#printReport');
                 if (printBtn) {
                     e.preventDefault();
-                    e.stopPropagation();
-                    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
-                    this.printReport?.();
+                    window.print();
                     return;
                 }
 
                 const dl = e.target.closest('#downloadReportPdf');
                 if (dl) {
                     e.preventDefault();
-                    e.stopPropagation();
-                    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
                     this.downloadReportPdf?.();
                     return;
                 }
@@ -3468,24 +3450,6 @@ const min = Math.min(...data, 0);
         document.getElementById('restoreFile').addEventListener('change', (e) => this.restoreData(e));
         document.getElementById('resetAllBtn').addEventListener('click', () => this.resetAll());
         document.getElementById('exportCalendarBtn').addEventListener('click', () => this.exportToCalendar());
-
-        // ===== Report / PDF (direct bindings as fallback) =====
-        // Some browsers / cached SW states may break delegation or swallow clicks.
-        // These direct listeners guarantee the buttons always react.
-        const bindOnce = (id, fn) => {
-            const el = document.getElementById(id);
-            if (!el || el._bwBound) return;
-            el._bwBound = true;
-            el.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                try { fn(); } catch (err) { console.error('❌ Report binding error:', id, err); }
-            }, { passive: false });
-        };
-        bindOnce('openReport', () => this.openReport?.());
-        bindOnce('closeReport', () => this.closeReport?.());
-        bindOnce('printReport', () => this.printReport?.());
-        bindOnce('downloadReportPdf', () => this.downloadReportPdf?.());
         document.getElementById('sendChatBtn').addEventListener('click', () => this.handleChatInput());
         document.getElementById('chatInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.handleChatInput();
@@ -3694,10 +3658,7 @@ if (toggleFixedListBtn) {
         toggleBtn.classList.toggle('hidden', !this.showFixedInHome);
         toggleBtn.title = this.showFixedInHome ? 'Nascondi sezione' : 'Mostra sezione';
     }
-
-        // ===== WiseScore Home: keep in sync =====
-        try { this.renderWiseScoreHome(); } catch(e) { /* no-op */ }
-    }
+}  
 
 
     // ========== FUNZIONI DI VISUALIZZAZIONE LISTE ==========
@@ -6360,21 +6321,6 @@ function initApp() {
         window.appInitialized = true;
         // Rende disponibile anche 'app' per comodità
         window.app = window.BudgetWiseApp;
-        // ✅ Merge Premium (Report/PDF) translations once they are defined (same file, later).
-        (function ensurePremiumTranslations(){
-            let tries = 0;
-            const tick = () => {
-                tries++;
-                try {
-                    if (window.app && window.app.mergeTranslations && window.app.getPremiumModuleTranslations) {
-                        window.app.mergeTranslations(window.app.getPremiumModuleTranslations());
-                        return;
-                    }
-                } catch (_) {}
-                if (tries < 50) setTimeout(tick, 100);
-            };
-            setTimeout(tick, 0);
-        })();
         console.log('✅ BudgetWise inizializzato correttamente');
         console.log('👉 Nella console puoi usare: window.app o window.BudgetWiseApp');
     } catch (error) {
@@ -6722,138 +6668,21 @@ BudgetWise.prototype.renderWiseScoreHome = function() {
 }
 
 // ===== Premium Report View =====
-BudgetWise.prototype._ensurePremiumI18n = function() {
-    try {
-        // Merge premium translations if available
-        if (typeof this.mergeTranslations === 'function') {
-            const src = (typeof this.getPremiumModuleTranslations === 'function')
-                ? this.getPremiumModuleTranslations()
-                : (window.app && typeof window.app.getPremiumModuleTranslations === 'function'
-                    ? window.app.getPremiumModuleTranslations()
-                    : null);
-
-            if (src && src[this.lang || 'it']) {
-                this.mergeTranslations(src);
-            }
-        }
-
-        // Hard fallback (in caso di apertura report prima del merge)
-        const lang = this.lang || 'it';
-        this.translations = this.translations || {};
-        this.translations[lang] = this.translations[lang] || {};
-        const d = this.translations[lang];
-
-        const fallback = {
-          reportTitle: "Report Premium",
-          print: "Stampa",
-          reportDownloadPdf: "⬇️ PDF",
-          close: "Chiudi",
-          reportSectionSummary: "Sintesi periodo",
-          reportSectionWiseScore: "WiseScore™",
-          reportSectionTotals: "Totali periodo",
-          reportSectionTimeline: "Timeline WiseScore™",
-          reportSectionDetails: "Dettaglio",
-          tableIncomes: "Entrate – dettaglio",
-          tableFixed: "Spese fisse – scadenze",
-          tableVariable: "Spese variabili – dettaglio",
-          colDate: "Data",
-          colDescription: "Voce",
-          colCategory: "Categoria",
-          colStatus: "Stato",
-          colAmount: "Importo",
-          noData: "Nessun dato",
-          periodLabel: "Periodo",
-          kpiIncome: "Entrate",
-          kpiFixed: "Fisse",
-          kpiVariable: "Variabili",
-          kpiNet: "Saldo",
-          wisescoreTitle: "WiseScore™",
-          wisescoreInsightExcellent: "Eccellente controllo",
-          wisescoreInsightGood: "Buon equilibrio",
-          wisescoreInsightOk: "Serve ottimizzare",
-          wisescoreInsightBad: "Attenzione: pressione alta",
-          pillarStability: "Stabilità",
-          pillarDiscipline: "Disciplina",
-          pillarResilience: "Resilienza",
-          eventPeriodStart: "Inizio periodo",
-          eventPeriodEnd: "Fine periodo",
-          eventIncome: "Entrate rilevate",
-          eventUnpaidFixed: "Fisse non coperte",
-          eventPeakSpend: "Picco spese variabili",
-          eventSavings: "Ritmo risparmio",
-          coverTitle: "Rapporto Decisionale",
-          coverPeriod: "Periodo",
-          coverFooter: "Generato da WiseScore™",
-          pdfLibMissing: "Libreria PDF non disponibile",
-        };
-        for (const k in fallback) {
-            if (!d[k]) d[k] = fallback[k];
-        }
-    } catch (_) {}
-};
-
 BudgetWise.prototype.openReport = function() {
     const overlay = document.getElementById('reportOverlay');
     const content = document.getElementById('reportContent');
     if (!overlay || !content) return;
-
-
-    this._ensurePremiumI18n?.();
-
-    // ✅ Critical fix: if overlay lives inside a hidden tab/section (ancestor display:none), it will have 0x0 rect.
-    // Move it to <body> once so it can render fullscreen reliably.
-    if (!overlay.dataset.bwMovedToBody) {
-        try {
-            let p = overlay.parentElement;
-            while (p && p !== document.body) {
-                const ps = window.getComputedStyle(p);
-                if (ps && ps.display === 'none') {
-                    document.body.appendChild(overlay);
-                    break;
-                }
-                p = p.parentElement;
-            }
-            // Even if no hidden ancestor was detected, ensure overlay is at top-level for z-index/fixed positioning.
-            if (overlay.parentElement !== document.body) {
-                document.body.appendChild(overlay);
-            }
-            overlay.dataset.bwMovedToBody = '1';
-        } catch (e) {}
-    }
     // a11y: preserve focus
     this._bwLastFocus = document.activeElement;
     overlay.setAttribute('aria-hidden', 'false');
 
     content.innerHTML = this.buildReportHtml();
-
-    // Force visibility + geometry even if inline style / cached CSS / transforms keep it hidden
-    overlay.style.display = 'block';
-    overlay.style.visibility = 'visible';
-    overlay.style.opacity = '1';
-    overlay.style.pointerEvents = 'auto';
-
-    // Some browsers/extensions/CSS can collapse overlays via transforms (scale(0)) or missing sizing.
-    overlay.style.transform = 'none';
-    overlay.style.position = 'fixed';
-    overlay.style.top = '0';
-    overlay.style.left = '0';
-    overlay.style.right = '0';
-    overlay.style.bottom = '0';
-    overlay.style.width = '100vw';
-    overlay.style.height = '100vh';
-    overlay.style.margin = '0';
-    overlay.style.overflow = 'auto';
-    overlay.style.zIndex = '9999';
-
-    // Force reflow to materialize layout before any focus management
-    void overlay.offsetHeight;
-
+    overlay.style.display = '';
     overlay.setAttribute('aria-hidden', 'false');
 
     // Apply i18n on freshly injected DOM
     this.applyLanguage?.();
 }
-
 
 BudgetWise.prototype.closeReport = function() {
     const overlay = document.getElementById('reportOverlay');
@@ -6870,140 +6699,6 @@ BudgetWise.prototype.closeReport = function() {
         try { this._bwLastFocus.focus(); } catch (_) {}
     }
 }
-
-// ===== Print (robust) =====
-// Printing the overlay (position:fixed + overflow:auto) often causes duplicated pages and cut content.
-// This prints a clean, dedicated document in a new window/tab and triggers the print dialog.
-BudgetWise.prototype.printReport = function() {
-    try {
-        this._ensurePremiumI18n?.();
-
-        // Guard: evita doppio trigger (alcuni handler/delegation possono richiamare due volte)
-        const now = Date.now();
-        if (this._bwLastPrintTs && (now - this._bwLastPrintTs) < 800) return;
-        this._bwLastPrintTs = now;
-
-        const html = this.buildReportHtml();
-
-        const css = `
-
-            @page { margin: 10mm; }
-            html, body { margin:0; padding:0; background: white; color: black; }
-            body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-            h2 { margin:0 0 20px 0; text-align:center; }
-            h3 { margin: 0 0 15px 0; color: #333; }
-
-            .report-section { 
-                break-inside: avoid; 
-                page-break-inside: avoid; 
-                margin-bottom: 20px; 
-                padding: 15px; 
-                border: 1px solid #ddd; 
-                border-radius: 8px;
-            }
-            .report-kpis { 
-                display: grid; 
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
-                gap: 12px; 
-            }
-            .wisescore-grid { 
-                display: grid; 
-                grid-template-columns: 1fr 2fr; 
-                gap: 20px; 
-            }
-            .wisescore-main { 
-                padding: 15px; 
-                background: #f5f5f5; 
-                border-radius: 8px; 
-                text-align: center; 
-            }
-            .wisescore-value { font-size: 48px; font-weight: bold; }
-            .wisescore-sub { font-size: 14px; color: #555; }
-            .wisescore-pillars { display: flex; flex-direction: column; gap: 10px; }
-            .pillar { 
-                display: grid; 
-                grid-template-columns: 120px 1fr 48px; 
-                gap: 10px; 
-                align-items: center; 
-            }
-            .pillar-bar { 
-                height: 12px; 
-                background: #eee; 
-                border-radius: 6px; 
-                overflow: hidden; 
-            }
-            .pillar-fill { 
-                height: 100%; 
-                background: #333; 
-                border-radius: 6px; 
-            }
-            .timeline { 
-                display: flex; 
-                flex-direction: column; 
-                gap: 10px; 
-            }
-            .timeline-item { 
-                display: grid; 
-                grid-template-columns: 30px 1fr; 
-                gap: 10px; 
-                padding: 10px; 
-                border: 1px solid #eee; 
-                border-radius: 8px; 
-            }
-            .timeline-title { 
-                display: flex; 
-                justify-content: space-between; 
-                font-weight: bold; 
-            }
-            .timeline-meta { color: #666; font-weight: normal; }
-            .kpi { 
-                padding: 10px; 
-                border: 1px solid #ddd; 
-                border-radius: 8px; 
-                background: #f9f9f9; 
-            }
-            .kpi-label { font-size: 12px; color: #666; }
-            .kpi-value { font-size: 18px; font-weight: bold; }
-            .kpi-note { font-size: 11px; color: #999; margin-top: 5px; }
-    
-        `;
-
-        // ✅ NO popup: usa iframe invisibile (stampa affidabile, niente blocco popup)
-        const iframe = document.createElement('iframe');
-        iframe.style.position = 'fixed';
-        iframe.style.right = '0';
-        iframe.style.bottom = '0';
-        iframe.style.width = '0';
-        iframe.style.height = '0';
-        iframe.style.border = '0';
-        iframe.style.opacity = '0';
-        iframe.setAttribute('aria-hidden', 'true');
-        document.body.appendChild(iframe);
-
-        const doc = iframe.contentDocument || iframe.contentWindow?.document;
-        if (!doc) {
-            try { document.body.removeChild(iframe); } catch(_) {}
-            return;
-        }
-
-        doc.open();
-        doc.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-            <title>BudgetWise Report</title><style>${css}</style></head><body>${html}</body></html>`);
-        doc.close();
-
-        const win = iframe.contentWindow;
-        // Stampa quando il contenuto è pronto
-        setTimeout(() => {
-            try { win && win.focus && win.focus(); } catch(_) {}
-            try { win && win.print && win.print(); } catch(_) {}
-            // Cleanup
-            setTimeout(() => { try { document.body.removeChild(iframe); } catch(_) {} }, 1000);
-        }, 250);
-
-    } catch (e) {
-        console.error('Errore printReport:', e);
-    }
-};;
 
 BudgetWise.prototype.loadPdfLib = async function() {
     // Lazy-load jsPDF from CDN only when needed (frontend-only).
@@ -7034,10 +6729,7 @@ BudgetWise.prototype.loadPdfLib = async function() {
 }
 
 BudgetWise.prototype.downloadReportPdf = async function() {
-        this._ensurePremiumI18n?.();
-
     try {
-        this._ensurePremiumI18n?.();
         const ok = await this.loadPdfLib();
         if (!ok) {
             alert(this.t('pdfLibMissing'));
@@ -7046,37 +6738,33 @@ BudgetWise.prototype.downloadReportPdf = async function() {
 
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-        const _pdfSafe = (s) => String(s ?? '')
-            .replace(/[\u{1F300}-\u{1FAFF}]/gu,'')
-            .replace(/[\u2600-\u27BF]/g,'')
-            .replace(/[\u2000-\u206F]/g,' ')
-            .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'')
-            .replace(/\s+/g,' ')
-            .trim();
-        const _pdfStatus = (s) => _pdfSafe(s).replace(/[#�]/g,'').trim();
-
 // ===== ULTRA PREMIUM COVER =====
 try {
-  const lang = (this.data && this.data.language) ? this.data.language : (this.lang || 'it');
+  const lang = this.lang || 'it';
 
-  // Periodo per copertina
-  const start = this.normalizeIsoDate?.(this.data.periodStart) || this.data.periodStart;
-  const end = this.normalizeIsoDate?.(this.data.periodEnd) || this.data.periodEnd;
-  const period = (start && end) ? `${start} → ${end}` : (start || end || '—');
+  const coverTitle = {
+    it: 'Executive Report',
+    en: 'Executive Report',
+    es: 'Informe Ejecutivo',
+    fr: 'Rapport Exécutif'
+  }[lang] || 'Executive Report';
 
-  const coverTitle = this.t('coverTitle') || 'Decision Report';
-  const periodLabel = this.t('coverPeriod') || this.t('periodLabel') || 'Period';
-  const coverFooter = this.t('coverFooter') || 'Generated by WiseScore™';
+  const periodLabel = {
+    it: 'Periodo',
+    en: 'Period',
+    es: 'Periodo',
+    fr: 'Période'
+  }[lang] || 'Period';
 
-if (typeof drawUltraPremiumCover === 'function') {
+  if (typeof drawUltraPremiumCover === 'function') {
     await drawUltraPremiumCover(doc, {
       lang,
       title: coverTitle,
       periodLabel,
-      periodValue: period,
-      logoUrl: 'assets/budgetwise_lockup_dark.png',
-      watermarkUrl: 'assets/ff_watermark_white.png',
-      footer: coverFooter,
+      periodValue: '', // volendo dopo lo mettiamo col "period" che calcoli sotto
+      logoUrl: 'assets/brand/budgetwise_lockup_dark.png',
+      watermarkUrl: 'assets/brand/ff_watermark_white.png',
+      footer: 'Generated by WiseScore™',
       subtitle: 'Decision Intelligence Platform',
     });
 
@@ -7085,9 +6773,6 @@ if (typeof drawUltraPremiumCover === 'function') {
 } catch (e) {
   console.warn('Cover skipped:', e);
 }
-        // Reset text color after cover (cover may set white text)
-        try { doc.setTextColor(20,20,20); } catch(_) {}
-
         const m = this.getWiseScoreModel();
         const start = this.normalizeIsoDate?.(this.data.periodStart) || this.data.periodStart;
         const end = this.normalizeIsoDate?.(this.data.periodEnd) || this.data.periodEnd;
@@ -7113,13 +6798,13 @@ if (typeof drawUltraPremiumCover === 'function') {
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(11);
-        doc.text(_pdfSafe(`${this.t('periodLabel')}: ${period}`), margin, y);
+        doc.text(`${this.t('periodLabel')}: ${period}`, margin, y);
         y += 18;
 
         // WiseScore block
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(13);
-        doc.text(_pdfSafe(this.t('reportSectionWiseScore')), margin, y);
+        doc.text(this.t('reportSectionWiseScore'), margin, y);
         y += 12;
 
         doc.setDrawColor(220);
@@ -7133,7 +6818,7 @@ if (typeof drawUltraPremiumCover === 'function') {
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(11);
-        doc.text(_pdfSafe((m.insight || '').slice(0, 120)), margin + 86, y + 10, { maxWidth: page.w - margin*2 - 110 });
+        doc.text((m.insight || '').slice(0, 120), margin + 86, y + 10, { maxWidth: page.w - margin*2 - 110 });
 
         // Pillars
         const pillarY = y + 40;
@@ -7145,7 +6830,7 @@ if (typeof drawUltraPremiumCover === 'function') {
             const yy = pillarY + idx*18;
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(10);
-            doc.text(_pdfSafe(`${label}: ${Math.round(value)}/100`), px, yy);
+            doc.text(`${label}: ${Math.round(value)}/100`, px, yy);
             doc.setDrawColor(220);
             doc.rect(px + 130, yy - 7, barW, barH);
             doc.setFillColor(30, 30, 30);
@@ -7162,7 +6847,7 @@ if (typeof drawUltraPremiumCover === 'function') {
         addPageIfNeeded(y + 110);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(13);
-        doc.text(_pdfSafe(this.t('reportSectionSummary')), margin, y);
+        doc.text(this.t('reportSectionSummary'), margin, y);
         y += 12;
 
         const kpis = [
@@ -7264,7 +6949,7 @@ if (typeof drawUltraPremiumCover === 'function') {
         addPageIfNeeded(y + 60);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(13);
-        doc.text(_pdfSafe(this.t('reportSectionDetails')), margin, y);
+        doc.text(this.t('reportSectionDetails'), margin, y);
         y += 14;
 
         const hdr = [
@@ -7321,7 +7006,7 @@ if (typeof drawUltraPremiumCover === 'function') {
         addPageIfNeeded(y + 40);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(13);
-        doc.text(_pdfSafe(this.t('wisescoreTimeline')), margin, y);
+        doc.text(this.t('wisescoreTimeline'), margin, y);
         y += 14;
 
         doc.setFont('helvetica', 'normal');
@@ -7329,10 +7014,7 @@ if (typeof drawUltraPremiumCover === 'function') {
 
         const items = (m.timeline || []);
         for (const it of items) {
-            // Avoid emojis/icons in PDF: jsPDF WinAnsi encoding can produce garbled characters.
-            const safeTitle = (it && it.title) ? String(it.title) : '';
-            const safeMeta = (it && it.meta) ? String(it.meta) : '';
-            const line = `${safeTitle}${safeMeta ? ' — ' + safeMeta : ''}`;
+            const line = `${it.ico || '•'}  ${it.title}${it.meta ? ' — ' + it.meta : ''}`;
             addPageIfNeeded(y + 36);
             doc.text(line, margin, y, { maxWidth: page.w - margin*2 });
             y += 14;
@@ -7349,7 +7031,7 @@ if (typeof drawUltraPremiumCover === 'function') {
         const stamp = new Date().toISOString().slice(0, 10);
         doc.setFontSize(9);
         doc.setTextColor(120);
-        doc.text(_pdfSafe(`WiseMind™ / WiseScore™ • ${stamp}`), margin, page.h - 24);
+        doc.text(`WiseMind™ / WiseScore™ • ${stamp}`, margin, page.h - 24);
 
         doc.save(`BudgetWise_Report_${(start||'')}_${(end||'')}.pdf`);
     } catch (e) {
@@ -7359,22 +7041,11 @@ if (typeof drawUltraPremiumCover === 'function') {
 }
 
 BudgetWise.prototype.buildReportHtml = function() {
-    this._ensurePremiumI18n?.();
-
     const m = this.getWiseScoreModel();
     const start = this.normalizeIsoDate?.(this.data.periodStart) || this.data.periodStart;
     const end = this.normalizeIsoDate?.(this.data.periodEnd) || this.data.periodEnd;
     const period = (start && end) ? `${start} → ${end}` : (start || end || '—');
 
-
-    const tMaybe = (s) => {
-        if (!s) return s;
-        try {
-            const tr = this.t(String(s));
-            return (tr !== s) ? tr : s;
-        } catch (_) { return s; }
-    };
-    const insightText = tMaybe(m.insight);
     const kpi = (labelKey, value, note='') => `
         <div class="kpi">
             <div class="kpi-label">${this.t(labelKey)}</div>
@@ -7388,10 +7059,10 @@ BudgetWise.prototype.buildReportHtml = function() {
             <div class="timeline-ico">${it.ico || '•'}</div>
             <div>
                 <div class="timeline-title">
-                    <span>${this.escapeHtml?.(tMaybe(it.title)) ?? tMaybe(it.title)}</span>
-                    <span class="timeline-meta">${this.escapeHtml?.(tMaybe(it.meta)) ?? tMaybe(it.meta)}</span>
+                    <span>${this.escapeHtml?.(it.title) ?? it.title}</span>
+                    <span class="timeline-meta">${this.escapeHtml?.(it.meta) ?? it.meta}</span>
                 </div>
-                ${(it.desc ? `<div class="timeline-desc">${this.escapeHtml?.(tMaybe(it.desc)) ?? tMaybe(it.desc)}</div>` : '')}
+                ${(it.desc ? `<div class="timeline-desc">${this.escapeHtml?.(it.desc) ?? it.desc}</div>` : '')}
             </div>
         </div>
     `).join('');
@@ -7416,7 +7087,7 @@ BudgetWise.prototype.buildReportHtml = function() {
             <div class="wisescore-grid">
                 <div class="wisescore-main">
                     <div class="wisescore-value">${m.score}</div>
-                    <div class="wisescore-sub">${this.escapeHtml?.(insightText) ?? insightText}</div>
+                    <div class="wisescore-sub">${this.escapeHtml?.(m.insight) ?? m.insight}</div>
                 </div>
                 <div class="wisescore-pillars">
                     <div class="pillar">
@@ -7455,19 +7126,6 @@ BudgetWise.prototype.buildReportHtml = function() {
     `;
 }
 
-// ===== Ensure Premium i18n merged (report/pdf) =====
-BudgetWise.prototype._ensurePremiumI18n = function() {
-  try {
-    if (!this.translations || typeof this.translations !== 'object') this.translations = {};
-    const lang = (this.data && this.data.language) ? this.data.language : 'it';
-    const has = !!(this.translations[lang] && this.translations[lang].reportTitle);
-    if (!has && window.app && window.app.getPremiumModuleTranslations && window.app.mergeTranslations) {
-      // merge into *this* instance
-      window.app.mergeTranslations.call(this, window.app.getPremiumModuleTranslations());
-    }
-  } catch(e) {}
-};
-
 BudgetWise.prototype.handleUrlAction = function() {
     try {
         const u = new URL(window.location.href);
@@ -7498,7 +7156,8 @@ window.app.getPremiumModuleTranslations = function() {
     it: {
       reportTitle: 'Report Premium',
       print: 'Stampa',
-      reportDownloadPdf: '⬇️ PDF',
+      reportDownloadPdf: 'Scarica PDF',
+      pdfLibMissing: 'Libreria PDF non disponibile (offline). Usa Stampa → Salva come PDF.',
       close: 'Chiudi',
       reportSectionSummary: 'Sintesi periodo',
       reportSectionWiseScore: 'WiseScore™',
@@ -7532,55 +7191,30 @@ window.app.getPremiumModuleTranslations = function() {
       eventIncome: 'Entrate rilevate',
       eventUnpaidFixed: 'Fisse non coperte',
       eventPeakSpend: 'Picco spese variabili',
-      eventSavings: 'Ritmo risparmio',
-      coverTitle: 'Rapporto Decisionale',
-      coverPeriod: 'Periodo',
-      coverFooter: 'Generato da WiseScore™',
-      pdfLibMissing: 'Libreria PDF non disponibile'
-    },
-    en: {
-      reportTitle: 'Premium Report',
-      print: 'Print',
-      reportDownloadPdf: '⬇️ PDF',
-      close: 'Close',
-      reportSectionSummary: 'Period summary',
-      reportSectionWiseScore: 'WiseScore™',
-      reportSectionTotals: 'Period totals',
-      reportSectionTimeline: 'WiseScore™ timeline',
-      reportSectionDetails: 'Details',
-      tableIncomes: 'Income – details',
-      tableFixed: 'Fixed expenses – due dates',
-      tableVariable: 'Variable expenses – details',
-      colDate: 'Date',
-      colDescription: 'Item',
-      colCategory: 'Category',
-      colStatus: 'Status',
-      colAmount: 'Amount',
-      noData: 'No data',
-      periodLabel: 'Period',
-      kpiIncome: 'Income',
-      kpiFixed: 'Fixed',
-      kpiVariable: 'Variable',
-      kpiNet: 'Net',
-      wisescoreTitle: 'WiseScore™',
-      pillarStability: 'Stability',
-      pillarDiscipline: 'Discipline',
-      pillarResilience: 'Resilience',
-      eventPeriodStart: 'Period start',
-      eventPeriodEnd: 'Period end',
-      eventIncome: 'Income logged',
-      eventUnpaidFixed: 'Uncovered fixed',
-      eventPeakSpend: 'Peak variable spend',
-      eventSavings: 'Savings pace',
-      coverTitle: 'Decision Report',
-      coverPeriod: 'Period',
-      coverFooter: 'Generated by WiseScore™',
-      pdfLibMissing: 'PDF library missing'
-    },
-    es: {},
-    fr: {}
+      eventSavings: 'Ritmo risparmio'
+    }
   };
 };
+// ========== METODI PREMIUM ==========
+    if (window.app && !window.app.premiumSetupDone) {
+        window.app.updateLicenseStatus = () => {
+            if (!window.app.license) {
+                console.warn('⚠️ License system non disponibile');
+                return;
+            }
+            
+            const licenseStatus = document.getElementById('licenseStatus');
+            if (!licenseStatus) return;
+            
+            const planInfo = window.app.license.getPlanInfo();
+            
+            const badge = licenseStatus.querySelector('.license-badge');
+            if (badge) {
+                licenseStatus.className = `license-status ${planInfo.name.toLowerCase()}`;
+                badge.textContent = planInfo.name;
+            }
+        };
+
         window.app.showPremiumModal = () => {
             const modal = document.getElementById('premiumModal');
             if (modal) {
@@ -7744,8 +7378,8 @@ if (document.readyState === 'loading') {
 //     title: i18n('cover.title'),
 //     periodLabel: i18n('cover.period'),
 //     periodValue: '2026-01-01 → 2026-03-01',
-//     logoUrl: 'assets/budgetwise_lockup_dark.png',
-//     watermarkUrl: 'assets/ff_watermark_white.png',
+//     logoUrl: 'assets/brand/budgetwise_lockup_dark.png',
+//     watermarkUrl: 'assets/brand/ff_watermark_white.png',
 //   });
 //
 // Works frontend-only. Designed to be "drop-in" without breaking existing export code.
@@ -7756,8 +7390,8 @@ async function drawUltraPremiumCover(doc, opts = {}) {
     periodLabel = 'Period',
     periodValue = '',
     footer = 'Generated by WiseScore™',
-    logoUrl = 'assets/budgetwise_lockup_dark.png',
-    watermarkUrl = 'assets/ff_watermark_white.png',
+    logoUrl = 'assets/brand/budgetwise_lockup_dark.png',
+    watermarkUrl = 'assets/brand/ff_watermark_white.png',
     brandName = 'BudgetWise',
     subtitle = 'Decision Intelligence Platform',
   } = opts;
@@ -7844,7 +7478,7 @@ async function drawUltraPremiumCover(doc, opts = {}) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(242, 246, 255);
-    doc.text(_pdfSafe(`${periodLabel.toUpperCase()}  ${periodValue}`), pageW / 2, chipY + 4, { align: 'center' });
+    doc.text(`${periodLabel.toUpperCase()}  ${periodValue}`, pageW / 2, chipY + 4, { align: 'center' });
   }
 
   // === Footer ===

@@ -1,9 +1,9 @@
 // BudgetWise Service Worker - Production Safe
 // Works for browser + installed PWA (GitHub Pages friendly)
 
-const CACHE_VERSION = "v32";                 // bump ad ogni release
+const CACHE_VERSION = "v25";                 // bump ad ogni release
 const CACHE_PREFIX = "budgetwise-cache-";
-const CACHE_NAME = CACHE_PREFIX + "20260303" + CACHE_VERSION;
+const CACHE_NAME = CACHE_PREFIX + "20260226" + CACHE_VERSION;
 
 const CORE_ASSETS = [
   "./",

@@ -50,7 +50,38 @@
     <meta http-equiv="Expires" content="0">
 </head>
 <body>
-<div class="container">
+    <script>
+    (function() {
+        // 🔓 Password gate DISABLED (stabilizzazione)
+        return;
+
+        // Password in CHIARO (molto più semplice!)
+        const VALID_PASSWORDS = ["padriseparati2026"];
+        
+        const SESSION_KEY = 'bw_auth_' + btoa(window.location.hostname);
+        const MAX_ATTEMPTS = 3;
+        
+        if (sessionStorage.getItem(SESSION_KEY) === '✓') return;
+        
+        let attempts = 0;
+        while (attempts < MAX_ATTEMPTS) {
+            const input = prompt('🔐 Password:');
+            if (input === null) break;
+            
+            if (VALID_PASSWORDS.includes(input)) {
+                sessionStorage.setItem(SESSION_KEY, '✓');
+                return;
+            }
+            attempts++;
+            if (attempts < MAX_ATTEMPTS) {
+                alert(`❌ Errata. Tentativi: ${MAX_ATTEMPTS - attempts}`);
+            }
+        }
+        
+        document.body.innerHTML = '<div style="height:100vh; background:linear-gradient(135deg,#0ea5e9,#38bdf8); display:flex; align-items:center; justify-content:center; font-family:system-ui;"><div style="background:white; padding:40px; border-radius:24px; text-align:center;"><div style="font-size:64px;">🔒</div><h2>Accesso Negato</h2><button onclick="location.reload()" style="background:#0ea5e9; color:white; border:none; padding:10px 20px; border-radius:50px; cursor:pointer;">Riprova</button></div></div>';
+    })();
+</script>
+    <div class="container">
         <!-- ========================================== -->
         <!-- TUTTO IL CONTENUTO PRINCIPALE È IDENTICO   -->
         <!-- ========================================== -->
@@ -690,32 +721,10 @@
           .catch(() => console.warn("⚠️ Icona 512px non trovata"));
         if (!("serviceWorker" in navigator)) return;
         try {
-          const reg = await navigator.serviceWorker.register('sw.js?v=20260303v25')
+          const reg = await navigator.serviceWorker.register('sw.js?v=20260226v16')
           console.log("✅ ServiceWorker registrato:", reg.scope);
           await reg.update().catch(() => {});
-        
-          // Force reload when a new SW takes control (avoids “patch vecchie”)
-          let _bwReloaded = false;
-          navigator.serviceWorker.addEventListener('controllerchange', () => {
-            if (_bwReloaded) return;
-            _bwReloaded = true;
-            window.location.reload();
-          });
-
-          // If there's a waiting SW, activate it immediately
-          if (reg.waiting) {
-            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-          }
-          reg.addEventListener('updatefound', () => {
-            const newWorker = reg.installing;
-            if (!newWorker) return;
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                newWorker.postMessage({ type: 'SKIP_WAITING' });
-              }
-            });
-          });
-} catch (err) {
+        } catch (err) {
           console.log("❌ ServiceWorker errore:", err);
         }
       });
@@ -733,7 +742,7 @@
             
             // Carica app.js SOLO dopo che license-system.js è caricato
             const appScript = document.createElement('script');
-            appScript.src = 'app.js?v=20260303v72';
+            appScript.src = 'app.js?v=20260226v61';
             appScript.onload = function() {
                 console.log('🚀 App.js caricato dopo license system');
             };
@@ -788,7 +797,7 @@
             
             // Carica app.js anche con fallback
             const appScript = document.createElement('script');
-            appScript.src = 'app.js?v=20260303v72';
+            appScript.src = 'app.js?v=20260226v61';
             appScript.onload = function() {
                 console.log('🚀 App.js caricato con fallback');
             };
